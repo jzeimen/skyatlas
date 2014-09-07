@@ -1,0 +1,13 @@
+Sept 6 2014. 
+
+Started the project. 
+At this point I just moved the webgl_custom_attributes_particles2.html example into this browserify/watchify setup. install watchify globally then just run this command to get everything going. 
+
+watchify src/index.js -o build/index.js -v
+
+
+Something is wrong with the node import and the first line needs to be commented out otherwise it looks like everything is twice as big (retina issue?).
+
+//var self = self || {};// File:src/Three.js
+
+The sprite image was also base 64 encoded into a string just so that chrome would not whine while running it locally.

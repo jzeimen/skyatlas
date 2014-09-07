@@ -1,0 +1,26 @@
+{
+  "name": "skyatlas",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "browserify": "^5.11.1",
+    "three": "^0.68.0",
+    "underscore": "^1.6.0",
+    "watchify": "^1.0.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jzeimen/skyatlas.git"
+  },
+  "author": "Joe Zeimen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jzeimen/skyatlas/issues"
+  },
+  "homepage": "https://github.com/jzeimen/skyatlas"
+}
