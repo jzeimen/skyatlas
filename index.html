@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>three.js webgl - custom attributes [particles][billboards]</title>
+    <title>SkyAtlas</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <style>
@@ -28,7 +28,6 @@
   </head>
 
   <body>
-    <div id="info"><a href="http://threejs.org" target="_blank">three.js</a> - custom attributes example - particles - billboards</div>
     <div id="container"></div>
 
     <script type="x-shader/x-vertex" id="vertexshader">
@@ -45,7 +44,7 @@
         vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
         //gl_PointSize = size;
-        gl_PointSize = 50.0;
+        gl_PointSize = size;
 
         gl_Position = projectionMatrix * mvPosition;
 

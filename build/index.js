@@ -1,4 +1,1421 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/jzeimen/Dropbox/Programming/skyatlas/src/detector.js":[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/jzeimen/Dropbox/Programming/skyatlas/node_modules/underscore/underscore.js":[function(require,module,exports){
+//     Underscore.js 1.7.0
+//     http://underscorejs.org
+//     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    concat           = ArrayProto.concat,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind;
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.7.0';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var createCallback = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  _.iteratee = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return createCallback(value, context, argCount);
+    if (_.isObject(value)) return _.matches(value);
+    return _.property(value);
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    if (obj == null) return obj;
+    iteratee = createCallback(iteratee, context);
+    var i, length = obj.length;
+    if (length === +length) {
+      for (i = 0; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    if (obj == null) return [];
+    iteratee = _.iteratee(iteratee, context);
+    var keys = obj.length !== +obj.length && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length),
+        currentKey;
+    for (var index = 0; index < length; index++) {
+      currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  var reduceError = 'Reduce of empty array with no initial value';
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = function(obj, iteratee, memo, context) {
+    if (obj == null) obj = [];
+    iteratee = createCallback(iteratee, context, 4);
+    var keys = obj.length !== +obj.length && _.keys(obj),
+        length = (keys || obj).length,
+        index = 0, currentKey;
+    if (arguments.length < 3) {
+      if (!length) throw new TypeError(reduceError);
+      memo = obj[keys ? keys[index++] : index++];
+    }
+    for (; index < length; index++) {
+      currentKey = keys ? keys[index] : index;
+      memo = iteratee(memo, obj[currentKey], currentKey, obj);
+    }
+    return memo;
+  };
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = function(obj, iteratee, memo, context) {
+    if (obj == null) obj = [];
+    iteratee = createCallback(iteratee, context, 4);
+    var keys = obj.length !== + obj.length && _.keys(obj),
+        index = (keys || obj).length,
+        currentKey;
+    if (arguments.length < 3) {
+      if (!index) throw new TypeError(reduceError);
+      memo = obj[keys ? keys[--index] : --index];
+    }
+    while (index--) {
+      currentKey = keys ? keys[index] : index;
+      memo = iteratee(memo, obj[currentKey], currentKey, obj);
+    }
+    return memo;
+  };
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var result;
+    predicate = _.iteratee(predicate, context);
+    _.some(obj, function(value, index, list) {
+      if (predicate(value, index, list)) {
+        result = value;
+        return true;
+      }
+    });
+    return result;
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    if (obj == null) return results;
+    predicate = _.iteratee(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(_.iteratee(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    if (obj == null) return true;
+    predicate = _.iteratee(predicate, context);
+    var keys = obj.length !== +obj.length && _.keys(obj),
+        length = (keys || obj).length,
+        index, currentKey;
+    for (index = 0; index < length; index++) {
+      currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    if (obj == null) return false;
+    predicate = _.iteratee(predicate, context);
+    var keys = obj.length !== +obj.length && _.keys(obj),
+        length = (keys || obj).length,
+        index, currentKey;
+    for (index = 0; index < length; index++) {
+      currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given value (using `===`).
+  // Aliased as `include`.
+  _.contains = _.include = function(obj, target) {
+    if (obj == null) return false;
+    if (obj.length !== +obj.length) obj = _.values(obj);
+    return _.indexOf(obj, target) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      return (isFunc ? method : value[method]).apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matches(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matches(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = obj.length === +obj.length ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = _.iteratee(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = obj.length === +obj.length ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = _.iteratee(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = obj && obj.length === +obj.length ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (obj.length !== +obj.length) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = _.iteratee(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = _.iteratee(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = _.iteratee(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = array.length;
+    while (low < high) {
+      var mid = low + high >>> 1;
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (obj.length === +obj.length) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return obj.length === +obj.length ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = _.iteratee(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    if (n < 0) return [];
+    return slice.call(array, 0, n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N. The **guard** check allows it to work with
+  // `_.map`.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array. The **guard** check allows it to work with `_.map`.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return slice.call(array, Math.max(array.length - n, 0));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array. The **guard**
+  // check allows it to work with `_.map`.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, output) {
+    if (shallow && _.every(input, _.isArray)) {
+      return concat.apply(output, input);
+    }
+    for (var i = 0, length = input.length; i < length; i++) {
+      var value = input[i];
+      if (!_.isArray(value) && !_.isArguments(value)) {
+        if (!strict) output.push(value);
+      } else if (shallow) {
+        push.apply(output, value);
+      } else {
+        flatten(value, shallow, strict, output);
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false, []);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (array == null) return [];
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = _.iteratee(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = array.length; i < length; i++) {
+      var value = array[i];
+      if (isSorted) {
+        if (!i || seen !== value) result.push(value);
+        seen = value;
+      } else if (iteratee) {
+        var computed = iteratee(value, i, array);
+        if (_.indexOf(seen, computed) < 0) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (_.indexOf(result, value) < 0) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true, []));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    if (array == null) return [];
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = array.length; i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(slice.call(arguments, 1), true, true, []);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function(array) {
+    if (array == null) return [];
+    var length = _.max(arguments, 'length').length;
+    var results = Array(length);
+    for (var i = 0; i < length; i++) {
+      results[i] = _.pluck(arguments, i);
+    }
+    return results;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    if (list == null) return {};
+    var result = {};
+    for (var i = 0, length = list.length; i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = function(array, item, isSorted) {
+    if (array == null) return -1;
+    var i = 0, length = array.length;
+    if (isSorted) {
+      if (typeof isSorted == 'number') {
+        i = isSorted < 0 ? Math.max(0, length + isSorted) : isSorted;
+      } else {
+        i = _.sortedIndex(array, item);
+        return array[i] === item ? i : -1;
+      }
+    }
+    for (; i < length; i++) if (array[i] === item) return i;
+    return -1;
+  };
+
+  _.lastIndexOf = function(array, item, from) {
+    if (array == null) return -1;
+    var idx = array.length;
+    if (typeof from == 'number') {
+      idx = from < 0 ? idx + from + 1 : Math.min(idx, from + 1);
+    }
+    while (--idx >= 0) if (array[idx] === item) return idx;
+    return -1;
+  };
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (arguments.length <= 1) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Reusable constructor function for prototype setting.
+  var Ctor = function(){};
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    var args, bound;
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    args = slice.call(arguments, 2);
+    bound = function() {
+      if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
+      Ctor.prototype = func.prototype;
+      var self = new Ctor;
+      Ctor.prototype = null;
+      var result = func.apply(self, args.concat(slice.call(arguments)));
+      if (_.isObject(result)) return result;
+      return self;
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    return function() {
+      var position = 0;
+      var args = boundArgs.slice();
+      for (var i = 0, length = args.length; i < length; i++) {
+        if (args[i] === _) args[i] = arguments[position++];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return func.apply(this, args);
+    };
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = hasher ? hasher.apply(this, arguments) : key;
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = function(func) {
+    return _.delay.apply(_, [func, 1].concat(slice.call(arguments, 1)));
+  };
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        clearTimeout(timeout);
+        timeout = null;
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last > 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed after being called N times.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed before being called N times.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      } else {
+        func = null;
+      }
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Retrieve the names of an object's properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    var source, prop;
+    for (var i = 1, length = arguments.length; i < length; i++) {
+      source = arguments[i];
+      for (prop in source) {
+        if (hasOwnProperty.call(source, prop)) {
+            obj[prop] = source[prop];
+        }
+      }
+    }
+    return obj;
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(obj, iteratee, context) {
+    var result = {}, key;
+    if (obj == null) return result;
+    if (_.isFunction(iteratee)) {
+      iteratee = createCallback(iteratee, context);
+      for (key in obj) {
+        var value = obj[key];
+        if (iteratee(value, key, obj)) result[key] = value;
+      }
+    } else {
+      var keys = concat.apply([], slice.call(arguments, 1));
+      obj = new Object(obj);
+      for (var i = 0, length = keys.length; i < length; i++) {
+        key = keys[i];
+        if (key in obj) result[key] = obj[key];
+      }
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(concat.apply([], slice.call(arguments, 1)), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    for (var i = 1, length = arguments.length; i < length; i++) {
+      var source = arguments[i];
+      for (var prop in source) {
+        if (obj[prop] === void 0) obj[prop] = source[prop];
+      }
+    }
+    return obj;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+    if (typeof a != 'object' || typeof b != 'object') return false;
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+    // Objects with different constructors are not equivalent, but `Object`s
+    // from different frames are.
+    var aCtor = a.constructor, bCtor = b.constructor;
+    if (
+      aCtor !== bCtor &&
+      // Handle Object.create(x) cases
+      'constructor' in a && 'constructor' in b &&
+      !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+        _.isFunction(bCtor) && bCtor instanceof bCtor)
+    ) {
+      return false;
+    }
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+    var size, result;
+    // Recursively compare objects and arrays.
+    if (className === '[object Array]') {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      size = a.length;
+      result = size === b.length;
+      if (result) {
+        // Deep compare the contents, ignoring non-numeric properties.
+        while (size--) {
+          if (!(result = eq(a[size], b[size], aStack, bStack))) break;
+        }
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      size = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      result = _.keys(b).length === size;
+      if (result) {
+        while (size--) {
+          // Deep compare each member
+          key = keys[size];
+          if (!(result = _.has(b, key) && eq(a[key], b[key], aStack, bStack))) break;
+        }
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return result;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b, [], []);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (_.isArray(obj) || _.isString(obj) || _.isArguments(obj)) return obj.length === 0;
+    for (var key in obj) if (_.has(obj, key)) return false;
+    return true;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around an IE 11 bug.
+  if (typeof /./ !== 'function') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = function(key) {
+    return function(obj) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of `key:value` pairs.
+  _.matches = function(attrs) {
+    var pairs = _.pairs(attrs), length = pairs.length;
+    return function(obj) {
+      if (obj == null) return !length;
+      obj = new Object(obj);
+      for (var i = 0; i < length; i++) {
+        var pair = pairs[i], key = pair[0];
+        if (pair[1] !== obj[key] || !(key in obj)) return false;
+      }
+      return true;
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = createCallback(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property) {
+    if (object == null) return void 0;
+    var value = object[property];
+    return _.isFunction(value) ? object[property]() : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(obj) {
+    return this._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result.call(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result.call(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result.call(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
+},{}],"/Users/jzeimen/Dropbox/Programming/skyatlas/src/detector.js":[function(require,module,exports){
 /**
  * @author alteredq / http://alteredqualia.com/
  * @author mr.doob / http://mrdoob.com/
@@ -63,12 +1480,17 @@ module.exports = Detector;
 var THREE = require('./threeHack.js');
 var Detector = require('./detector.js');
 var Stats = require('./stats.js');
+var STARS = require('./stardata.js');
+var SM = require('./skymath.js');
+var _ = require('underscore');
+
+var MAX_MAG = 6;
 
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 var renderer, scene, camera, stats;
 
-var sphere, uniforms, attributes;
+var geom, uniforms, attributes;
 
 var vc1;
 
@@ -77,6 +1499,17 @@ var HEIGHT = window.innerHeight;
 
 init();
 animate();
+
+function loadStars(){
+	var geometry = new THREE.Geometry();
+	
+	_.each(STARS, function(star){
+	    if(star.mag > MAX_MAG) return;
+	    var pos = SM.createPosition(star.ra,star.dec);
+		geometry.vertices.push(	new THREE.Vector3( pos.x,  pos.y, pos.z));		
+	});
+	return geometry;
+}
 
 function init() {
 
@@ -94,7 +1527,8 @@ function init() {
 
 		amplitude: { type: "f", value: 1.0 },
 		color:     { type: "c", value: new THREE.Color( 0xffffff ) },
-		texture:   { type: "t", value: THREE.ImageUtils.loadTexture( "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sHDgwCEMBJZu0AAAAdaVRYdENvbW1lbnQAAAAAAENyZWF0ZWQgd2l0aCBHSU1QZC5lBwAABM5JREFUWMO1V0tPG2cUPZ4Hxh6DazIOrjFNqJs0FIMqWFgWQkatsmvVbtggKlSVRVf5AWz4AWz4AUSKEChll19QJYSXkECuhFxsHjEhxCYm+DWGMZ5HF72DJq4bAzFXurI0M/I5997v3u9cC65vTJVn2lX/xHINQOYSBLTLEuIuCWw4Z3IGAEvf6ASmVHjNzHCXBG4A0AjACsAOwEbO0nsFQBnAGYASAIl+ZRMR7SolMEdsByD09fV5R0ZGgg8ePPjW5/N1iqLYpuu6RZblciKR2I9Go69evnwZnZ+fjwI4IS8AKBIRzeQfJWCANwKwh0KhtrGxsYehUOin1tbW+zzP23ietzY2NnIAoGmaLsuyUiqVyvl8XtrY2NiamZn589mzZxsAUgCOAeQAnFI2tI+VxIjaAeDzoaGh7xYWFuZOTk6OZVk+12uYqqq6JEnn0Wg0OT4+/geAXwGEAdwDIFJQXC1wO4DWR48e/RCPxxclSSroVzRFUbSDg4P848ePFwH8DuAhkWih83TRQWxFOXgAwvDwcOfo6OhvXV1d39tsNtuVBwTDWBwOh1UUxVsMw1hXVlbSdCgNV43uYSvrHg6H24aHh38eHBz85TrgF9FYLHA4HLzH43FvbW2d7u/vG+dANp8FpqIlbd3d3V8Fg8EfBUFw4BONZVmL3+9vHhkZCQL4AoAHgJPK8G+yzC0XDofdoVAo5PP5vkadTBAEtr+/39ff3x8gAp/RPOEqx2qjx+NpvXv3bk9DQ0NDvQgwDIOWlhZrMBj8kgi0UJdxRgYMArzL5XJ7vd57qLPZ7Xamp6fnNgBXtQxcjFuHw+Hyer3t9SYgCAITCAScAJoBNNEY/08GOFVVrfVMv7kMNDntFD1vjIAPrlRN0xjckOm6biFQ3jwNPwDMZrOnqVTqfb3Bi8Wivru7W/VCYkwPlKOjo0IikXh7EwQikYgE4Nw0CfXKDCipVCoTj8df3QABbW1tLUc6oUgkFPMkVACUNjc337148eKvw8PDbJ2jP1taWkoCyNDVXDSECmNSK4qiKNLq6urW8+fPI/UicHx8rD59+jSVy+WOAKSJhKENwFItLtoxk8mwsixzHR0dHe3t7c5PAU+n09rs7OzJkydPYqVSaQfANoDXALIk31S2smU1TWMPDg7K5XKZ7+3t9TudTut1U7+wsFCcmJiIpdPpbQBxADsAknQWymYCOukBHYCuKApisdhpMpnURFEU79y503TVyKenpzOTk5M7e3t7MQKPV0Zv1gNm+awB0MvlshqLxfLb29uyJElWURSbXC4XXyvqxcXFs6mpqeTc3Nzu3t7e3wQcA7BPZ8Cov1pNlJplmQtAG8MwHV6v95tAINA5MDBwPxAIuLu6upr8fr/VAN3c3JQjkcjZ+vp6fnl5+d2bN29SuVzuNYAEpf01CdRChUL+X1VskHACuA3Ay3Fcu9vt7nA6nZ7m5uYWQRCaNE3jVVW15PP580KhIGUymWw2m00DOAJwSP4WwPtq4LX2Ao6USxNlQyS/RcQcdLGwlNIz6vEMAaZpNzCk2Pll94LK/cDYimxERiBwG10sxjgvEZBE0UpE6vxj+0Ct5bTaXthgEhRmja8QWNkkPGsuIpfdjpkK+cZUWTC0KredVmtD/gdlSl6EG4AMvQAAAABJRU5ErkJggg==" ) },
+		//texture:   { type: "t", value: THREE.ImageUtils.loadTexture( "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sHDgwCEMBJZu0AAAAdaVRYdENvbW1lbnQAAAAAAENyZWF0ZWQgd2l0aCBHSU1QZC5lBwAABM5JREFUWMO1V0tPG2cUPZ4Hxh6DazIOrjFNqJs0FIMqWFgWQkatsmvVbtggKlSVRVf5AWz4AWz4AUSKEChll19QJYSXkECuhFxsHjEhxCYm+DWGMZ5HF72DJq4bAzFXurI0M/I5997v3u9cC65vTJVn2lX/xHINQOYSBLTLEuIuCWw4Z3IGAEvf6ASmVHjNzHCXBG4A0AjACsAOwEbO0nsFQBnAGYASAIl+ZRMR7SolMEdsByD09fV5R0ZGgg8ePPjW5/N1iqLYpuu6RZblciKR2I9Go69evnwZnZ+fjwI4IS8AKBIRzeQfJWCANwKwh0KhtrGxsYehUOin1tbW+zzP23ietzY2NnIAoGmaLsuyUiqVyvl8XtrY2NiamZn589mzZxsAUgCOAeQAnFI2tI+VxIjaAeDzoaGh7xYWFuZOTk6OZVk+12uYqqq6JEnn0Wg0OT4+/geAXwGEAdwDIFJQXC1wO4DWR48e/RCPxxclSSroVzRFUbSDg4P848ePFwH8DuAhkWih83TRQWxFOXgAwvDwcOfo6OhvXV1d39tsNtuVBwTDWBwOh1UUxVsMw1hXVlbSdCgNV43uYSvrHg6H24aHh38eHBz85TrgF9FYLHA4HLzH43FvbW2d7u/vG+dANp8FpqIlbd3d3V8Fg8EfBUFw4BONZVmL3+9vHhkZCQL4AoAHgJPK8G+yzC0XDofdoVAo5PP5vkadTBAEtr+/39ff3x8gAp/RPOEqx2qjx+NpvXv3bk9DQ0NDvQgwDIOWlhZrMBj8kgi0UJdxRgYMArzL5XJ7vd57qLPZ7Xamp6fnNgBXtQxcjFuHw+Hyer3t9SYgCAITCAScAJoBNNEY/08GOFVVrfVMv7kMNDntFD1vjIAPrlRN0xjckOm6biFQ3jwNPwDMZrOnqVTqfb3Bi8Wivru7W/VCYkwPlKOjo0IikXh7EwQikYgE4Nw0CfXKDCipVCoTj8df3QABbW1tLUc6oUgkFPMkVACUNjc337148eKvw8PDbJ2jP1taWkoCyNDVXDSECmNSK4qiKNLq6urW8+fPI/UicHx8rD59+jSVy+WOAKSJhKENwFItLtoxk8mwsixzHR0dHe3t7c5PAU+n09rs7OzJkydPYqVSaQfANoDXALIk31S2smU1TWMPDg7K5XKZ7+3t9TudTut1U7+wsFCcmJiIpdPpbQBxADsAknQWymYCOukBHYCuKApisdhpMpnURFEU79y503TVyKenpzOTk5M7e3t7MQKPV0Zv1gNm+awB0MvlshqLxfLb29uyJElWURSbXC4XXyvqxcXFs6mpqeTc3Nzu3t7e3wQcA7BPZ8Cov1pNlJplmQtAG8MwHV6v95tAINA5MDBwPxAIuLu6upr8fr/VAN3c3JQjkcjZ+vp6fnl5+d2bN29SuVzuNYAEpf01CdRChUL+X1VskHACuA3Ay3Fcu9vt7nA6nZ7m5uYWQRCaNE3jVVW15PP580KhIGUymWw2m00DOAJwSP4WwPtq4LX2Ao6USxNlQyS/RcQcdLGwlNIz6vEMAaZpNzCk2Pll94LK/cDYimxERiBwG10sxjgvEZBE0UpE6vxj+0Ct5bTaXthgEhRmja8QWNkkPGsuIpfdjpkK+cZUWTC0KredVmtD/gdlSl6EG4AMvQAAAABJRU5ErkJggg==" ) },
+		texture:   { type: "t", value: THREE.ImageUtils.loadTexture( "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAMAAAANIilAAAAAilBMVEUAAAD////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////2N2iNAAAALnRSTlMAAgEJBgwEEQUXFCIbDyYeMDk1P4ZESWxZdHwqTi2qZVRg946y17zs4aGazsSVYt1eKwAAA3pJREFUSMfd1tt2okAQBdCJzqjIRUARFBCIgoL6/783p6o63STgmORpVs7Kg3nYVPWFpn/9l5lMvi8l+PUN9/KCv5eJ5KvUBP997gEaziTmAchzrOTit2SB35p/goqcqtADFjPFn3U8WyxY/lFRfib6SVlQlu6c47ri34o/LGwo5FKFHgDOxYH/aYUuLctyOPixXDIXPcpBxQp1VrbKauXAz9G8tD6CTV2mtu2laY6kqefZ4Fxc1R5tWlmq6uV+GIZBEISh76fCWcusjQxYWaHBeh1R1usg9FOjGY82LTYFjbZZVlKybQSee7ZjceczpQ0lTNYVG6y3WZlUVVEUVZWU4Epjzj8OWzYWFtids0XZMinieEeJiyrJtqKXc258iKVpx/Zgs7KKd/v9hrIHT0rWK9W41mbE0yk17eXhOkuqGPJ+77rufgQvqnIb+Kk0brDpWhVOw/W2JHvv2gOlBd8VSRYFvpRWiz3oGoWpabbt4dQgp9OhY43GUzVqxsOuuXBS7GBPze2K3BrS+7hCaR61mTKxgrFOjp2HXPjYHppbXV8udX29QaM05kz6Nlg0LHfteHkQlVQYFvR8Pl/qa3NqUTrJqG/aZsDQGveHjK73x+7QXOvz+fX1FRql75sd+taD7mFYgzFk6vqEwrCkUVr6jsLczJjB3Lb7AF80DvqYtVmpL2HYUVwQbq6CecZkzI/a7k8YzTZNGEpTLlirlhdadokLPDbbep031Dc0Utc36hpLRetsW2N4BuzK1s6SmEpDX2vsEdj2iK7Lt82NV3p8e0rftMWgmxuC3dne+c14v7d7p67eYja/kcUOGm8GcoBF0/ROStcDPBGsSkesN8eua9sWL7RYLmzNB+evOTotGjXrmDjCR0mF2aIR68L9yv3zjxqHrmJwhA+xMoPlwu5U76/3pWnUchDxCVgVMVLI+afs6MmtDiJZa9IojsOXwgc3H/uWPjy1NZgbZ536xKMtJYpQNvfEmqYf6hXzMMAXh75Wfp7izCY7mC2FRasPLPPc5+T6MymfaNQdx6wxbua2x7FtpsPP+1Cbi4HjrDiQTGHNB3ZEI/0riSVZgsqlZKYHPMT6e8cc/sN1aMEW+LFGcfE6U+TJRczU7l8ABQrlnh+HNQIOLwF8dns0m0VVh1fhaXqKTXWJICM/h6n80H3jsg/6VSxeux+WvyirdfwGd+vYAAAAAElFTkSuQmCC" )}
 
 	};
 
@@ -111,42 +1545,61 @@ function init() {
 	});
 
 
-	var radius = 100, segments = 68, rings = 38;
-	var geometry = new THREE.SphereGeometry( radius, segments, rings );
+	//var radius = 100, segments = 68, rings = 38;
+	//var geometry = new THREE.SphereGeometry( radius, segments, rings );
+	
+	var geometry = loadStars();
+
+	var pos = SM.createPosition(2.0,89.99);
+	console.log(pos);
+	console.log(geometry);
+
+	geometry.vertices.push(new THREE.Vector3(pos.x,pos.y,pos.z));
+	geometry.vertices.push(new THREE.Vector3(0.0,100.0,0.0));
+	geometry.vertices.push(new THREE.Vector3(100.0,0.0,0.0));
+	geometry.vertices.push(new THREE.Vector3(-100.0,0.0,0.0));
+	geometry.vertices.push(new THREE.Vector3(0.0,-100.0,0.0));
+
 	console.log(geometry);
 	vc1 = geometry.vertices.length;
-	console.log(vc1);
-	var geometry2 = new THREE.BoxGeometry( 0.8 * radius, 0.8 * radius, 0.8 * radius, 10, 10, 10 );
-	//geometry.merge( geometry2 );
+	
 
-	sphere = new THREE.PointCloud( geometry, shaderMaterial );
+	geom = new THREE.PointCloud( geometry, shaderMaterial );
 
-	sphere.dynamic = true;
-	sphere.sortParticles = true;
 
-	var vertices = sphere.geometry.vertices;
+	
+
+	geom.dynamic = true;
+	geom.sortParticles = false;
+
+	var vertices = geom.geometry.vertices;
 	var values_size = attributes.size.value;
 	var values_color = attributes.ca.value;
 
-	for ( var v = 0; v < vertices.length; v ++ ) {
-
-		values_size[ v ] = 10;
+	for ( var v = 0; v < vertices.length-5; v ++ ) {
+		values_size[ v ] = (MAX_MAG-STARS[v].mag)*6.5;
 		values_color[ v ] = new THREE.Color( 0xffffff );
-
-		if ( v < vc1 ) {
-
-			values_color[ v ].setHSL(  ( (v %69) / 69.0 ), 1, 0.5 );
-
-		} else {
-
-			values_size[ v ] = 40;
-			values_color[ v ].setHSL( 0.6, 0.75, 0.25 + vertices[ v ].y / ( 2 * radius ) );
-
-		}
-
+		// Makes them all cool different colors
+		//values_color[ v ].setHSL(  ( (v %69) / 69.0 ), 1, 0.5 );
 	}
 
-	scene.add( sphere );
+	values_size[vertices.length-1] = 20;
+	values_color[vertices.length-1] = new THREE.Color(0x0000FF);
+	values_size[vertices.length-2] = 20;
+	values_color[vertices.length-2] = new THREE.Color(0x0000FF);
+	values_size[vertices.length-3] = 20;
+	values_color[vertices.length-3] = new THREE.Color(0x0000FF);
+	values_size[vertices.length-4] = 20;
+	values_color[vertices.length-4] = new THREE.Color(0x0000FF);
+	values_size[vertices.length-5] = 20;
+	values_color[vertices.length-5] = new THREE.Color(0x0000FF);
+	values_size[vertices.length-6] = 20;
+	values_color[vertices.length-6] = new THREE.Color(0x0000FF);
+	//True North
+
+
+
+	scene.add( geom );
 
 	renderer = new THREE.WebGLRenderer();
 	renderer.setSize( WIDTH, HEIGHT );
@@ -182,28 +1635,5081 @@ function animate() {
 	stats.update();
 
 }
-
+var z = 100;
 function render() {
 
 	var time = Date.now() * 0.005;
+	window.mult += -.01;
+	z-=0.2;
+	//geom.rotation.y = 0.04 * time;
+	//geom.rotation.z = 0.05 * time;
 
-	sphere.rotation.y = 0.02 * time;
-	sphere.rotation.z = 0.02 * time;
+	// for( var i = 0; i < attributes.size.value.length-1; i ++ ) {
+	// 	attributes.size.value[ i ] = (MAX_MAG-STARS[i].mag)*window.mult;
+	// }
 
-	for( var i = 0; i < attributes.size.value.length; i ++ ) {
+	//attributes.size.needsUpdate = true;
 
-		if ( i < vc1 )
-			attributes.size.value[ i ] = 16 + 12 * Math.sin( 0.1 * i + time );
-
-
-	}
-
-	attributes.size.needsUpdate = true;
-
+	camera.position.set(0,0,0);
+  	camera.up = new THREE.Vector3(0,0,1);
+  	camera.lookAt(new THREE.Vector3(0,100,0));
+  	window.camera = camera;
 	renderer.render( scene, camera );
 
 }
-},{"./detector.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/detector.js","./stats.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stats.js","./threeHack.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/threeHack.js"}],"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stats.js":[function(require,module,exports){
+},{"./detector.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/detector.js","./skymath.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/skymath.js","./stardata.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stardata.js","./stats.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stats.js","./threeHack.js":"/Users/jzeimen/Dropbox/Programming/skyatlas/src/threeHack.js","underscore":"/Users/jzeimen/Dropbox/Programming/skyatlas/node_modules/underscore/underscore.js"}],"/Users/jzeimen/Dropbox/Programming/skyatlas/src/skymath.js":[function(require,module,exports){
+var radian = function (degrees){
+  return degrees * Math.PI / 180;
+}
+
+var decToRad = function (degrees){
+  return radian(degrees < 0 ? 90-degrees : degrees - 90);
+}
+
+var raToRad = function(ra){
+  return radian(15.0*ra);
+}
+
+function createPosition(ra,dec) {
+  var radius = 700,
+      theta = raToRad(ra),
+      phi = decToRad(dec);
+
+  return {
+    x: radius * Math.cos(theta) * Math.sin(phi),
+    y: radius * Math.sin(theta) * Math.sin(phi),
+    z: radius * Math.cos(phi)
+  };
+}
+
+
+
+module.exports = {
+	radian: radian,
+	decToRad: decToRad,
+	raToRad: raToRad,
+	createPosition: createPosition	
+};
+},{}],"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stardata.js":[function(require,module,exports){
+module.exports = [
+{"mag":5.71,"ra":0.01794397,"dec":-48.80985919},
+{"mag":5.53,"ra":0.02225348,"dec":-50.33739907},
+{"mag":4.78,"ra":0.02662528,"dec":-77.06529438},
+{"mag":5.58,"ra":0.02694969,"dec":61.22280406},
+{"mag":5.13,"ra":0.03039927,"dec":-3.02747891},
+{"mag":4.37,"ra":0.03266433,"dec":-6.01397169},
+{"mag":5.8,"ra":0.03601251,"dec":27.08448905},
+{"mag":5.04,"ra":0.03886504,"dec":-29.72044805},
+{"mag":5.7,"ra":0.04159929,"dec":8.48557854},
+{"mag":5.87,"ra":0.04335616,"dec":66.09896341},
+{"mag":4.55,"ra":0.06232565,"dec":-17.33597002},
+{"mag":5.9,"ra":0.07046214,"dec":62.2876646},
+{"mag":5.78,"ra":0.07215592,"dec":-16.52888969},
+{"mag":4.99,"ra":0.07503398,"dec":-10.50949443},
+{"mag":5.59,"ra":0.07812589,"dec":-71.43685835},
+{"mag":5.68,"ra":0.07828819,"dec":67.16638761},
+{"mag":5.8,"ra":0.08503682,"dec":61.31396468},
+{"mag":4.61,"ra":0.08892938,"dec":-5.70783255},
+{"mag":5.55,"ra":0.09498215,"dec":13.39628227},
+{"mag":5.98,"ra":0.10431626,"dec":58.43668966},
+{"mag":5.7,"ra":0.10518422,"dec":-49.07509405},
+{"mag":5.57,"ra":0.10736857,"dec":64.19616859},
+{"mag":5.93,"ra":0.12968212,"dec":-22.50847542},
+{"mag":5.67,"ra":0.13431035,"dec":-33.52933371},
+{"mag":5.99,"ra":0.13820907,"dec":-8.82402541},
+{"mag":2.07,"ra":0.13976888,"dec":29.09082805},
+{"mag":5.57,"ra":0.15064948,"dec":18.21202529},
+{"mag":2.28,"ra":0.15280269,"dec":59.15021814},
+{"mag":5.42,"ra":0.15583908,"dec":-27.9879039},
+{"mag":3.88,"ra":0.15681663,"dec":-45.74698836},
+{"mag":5.54,"ra":0.1672735,"dec":11.14580908},
+{"mag":5.29,"ra":0.16729695,"dec":-82.22399743},
+{"mag":5.84,"ra":0.17190257,"dec":-5.24851713},
+{"mag":5.01,"ra":0.17201167,"dec":46.07227117},
+{"mag":5.84,"ra":0.17854038,"dec":-12.57980381},
+{"mag":4.89,"ra":0.18775227,"dec":-15.46732287},
+{"mag":5.41,"ra":0.19289362,"dec":-27.7997782},
+{"mag":5.24,"ra":0.19552446,"dec":-35.13339606},
+{"mag":5.29,"ra":0.20276358,"dec":-17.93821766},
+{"mag":2.83,"ra":0.22059721,"dec":15.18361593},
+{"mag":5.78,"ra":0.22209681,"dec":-84.99402068},
+{"mag":5.71,"ra":0.2252598,"dec":41.03572671},
+{"mag":5.94,"ra":0.22839456,"dec":-26.02215399},
+{"mag":5.13,"ra":0.24099785,"dec":-7.78053784},
+{"mag":4.79,"ra":0.24336336,"dec":20.2066972},
+{"mag":4.44,"ra":0.24400908,"dec":-18.93268628},
+{"mag":5.77,"ra":0.24847259,"dec":-9.56955053},
+{"mag":5.66,"ra":0.26910712,"dec":-31.44632821},
+{"mag":5.74,"ra":0.28251411,"dec":61.53319397},
+{"mag":4.61,"ra":0.28487101,"dec":38.68167915},
+{"mag":5.86,"ra":0.28584449,"dec":47.94741495},
+{"mag":4.51,"ra":0.3054737,"dec":36.7853273},
+{"mag":5.88,"ra":0.31061603,"dec":31.51723388},
+{"mag":3.56,"ra":0.32380084,"dec":-8.82382948},
+{"mag":4.23,"ra":0.33386505,"dec":-64.8776232},
+{"mag":5.89,"ra":0.34010888,"dec":30.93561514},
+{"mag":5.38,"ra":0.34329562,"dec":8.19024803},
+{"mag":5.5,"ra":0.34417857,"dec":-69.62491154},
+{"mag":5.79,"ra":0.34598296,"dec":32.91122853},
+{"mag":5.16,"ra":0.35200719,"dec":37.96869954},
+{"mag":5.96,"ra":0.3579841,"dec":-77.42685699},
+{"mag":5.18,"ra":0.35866009,"dec":-28.98129509},
+{"mag":5.61,"ra":0.362843,"dec":-20.05799253},
+{"mag":5.58,"ra":0.40434562,"dec":52.01992467},
+{"mag":5.38,"ra":0.41319127,"dec":61.83106347},
+{"mag":5.72,"ra":0.41844046,"dec":53.04678501},
+{"mag":5.77,"ra":0.42339353,"dec":1.93972374},
+{"mag":2.82,"ra":0.42755612,"dec":-77.25503511},
+{"mag":3.93,"ra":0.43669894,"dec":-43.67990933},
+{"mag":2.4,"ra":0.43801871,"dec":-42.30512197},
+{"mag":5.99,"ra":0.45407977,"dec":-25.54713325},
+{"mag":4.86,"ra":0.46547573,"dec":-33.0070446},
+{"mag":5.01,"ra":0.46745682,"dec":17.89307501},
+{"mag":5.18,"ra":0.47044031,"dec":44.39448925},
+{"mag":5.42,"ra":0.47400487,"dec":-39.91490183},
+{"mag":5.72,"ra":0.50065357,"dec":-3.95729662},
+{"mag":5.2,"ra":0.50203771,"dec":29.75169567},
+{"mag":5.94,"ra":0.50553158,"dec":59.977564},
+{"mag":5.17,"ra":0.50629756,"dec":-23.78771429},
+{"mag":5.67,"ra":0.50721518,"dec":-48.21469821},
+{"mag":4.76,"ra":0.52357113,"dec":-48.80356171},
+{"mag":5.88,"ra":0.52377917,"dec":33.58168169},
+{"mag":4.36,"ra":0.52571132,"dec":-62.95808549},
+{"mag":4.53,"ra":0.525932,"dec":-62.96544985},
+{"mag":5.59,"ra":0.52811415,"dec":52.83955844},
+{"mag":4.74,"ra":0.52953275,"dec":54.52232473},
+{"mag":5.69,"ra":0.53993193,"dec":6.95545461},
+{"mag":5.38,"ra":0.54316689,"dec":20.29443334},
+{"mag":5.07,"ra":0.5454984,"dec":-63.03137868},
+{"mag":4.17,"ra":0.54999626,"dec":62.93178781},
+{"mag":5.93,"ra":0.55286764,"dec":54.89508062},
+{"mag":5.55,"ra":0.56140586,"dec":-29.55820696},
+{"mag":5.57,"ra":0.5743375,"dec":-52.37318294},
+{"mag":5.2,"ra":0.58740026,"dec":-3.59275785},
+{"mag":5.94,"ra":0.5924305,"dec":-0.50545908},
+{"mag":5.51,"ra":0.59475968,"dec":-48.00066027},
+{"mag":5.08,"ra":0.60230209,"dec":54.16845384},
+{"mag":5.78,"ra":0.60759498,"dec":60.32621728},
+{"mag":5.14,"ra":0.61290861,"dec":44.48850971},
+{"mag":5.89,"ra":0.61314215,"dec":15.23175994},
+{"mag":4.34,"ra":0.61467749,"dec":33.71935227},
+{"mag":3.69,"ra":0.61618528,"dec":53.89693161},
+{"mag":5.57,"ra":0.62216307,"dec":-24.76722545},
+{"mag":5.45,"ra":0.62256277,"dec":35.39951013},
+{"mag":4.34,"ra":0.64263868,"dec":29.312369},
+{"mag":5.45,"ra":0.65274638,"dec":49.35459528},
+{"mag":3.27,"ra":0.65544371,"dec":30.86122579},
+{"mag":5.88,"ra":0.6561374,"dec":21.2513739},
+{"mag":5.36,"ra":0.66543164,"dec":21.4385644},
+{"mag":5.89,"ra":0.67351556,"dec":-59.45568115},
+{"mag":2.24,"ra":0.67510756,"dec":56.53740928},
+{"mag":5.9,"ra":0.6784392,"dec":-4.35180551},
+{"mag":5.3,"ra":0.68533204,"dec":39.45867141},
+{"mag":4.59,"ra":0.68877111,"dec":-46.08500934},
+{"mag":5.72,"ra":0.69619497,"dec":-56.50145475},
+{"mag":5.83,"ra":0.70095437,"dec":66.14761311},
+{"mag":4.8,"ra":0.70107895,"dec":50.51254151},
+{"mag":5.38,"ra":0.70786031,"dec":-65.46813002},
+{"mag":5.99,"ra":0.7115666,"dec":-60.26268184},
+{"mag":4.36,"ra":0.72256778,"dec":-57.46309763},
+{"mag":4.95,"ra":0.72446964,"dec":47.02463657},
+{"mag":2.04,"ra":0.7264523,"dec":-17.9866841},
+{"mag":4.77,"ra":0.73650151,"dec":-10.60927365},
+{"mag":5.9,"ra":0.73664316,"dec":-38.42197898},
+{"mag":5.66,"ra":0.7406184,"dec":47.863963},
+{"mag":4.48,"ra":0.74541725,"dec":48.28438262},
+{"mag":5.22,"ra":0.74567703,"dec":-22.00633247},
+{"mag":5.94,"ra":0.74920103,"dec":-42.67632489},
+{"mag":5.41,"ra":0.75477874,"dec":55.2214087},
+{"mag":5.64,"ra":0.76086424,"dec":74.9881262},
+{"mag":5.8,"ra":0.76262055,"dec":-47.55217573},
+{"mag":5.49,"ra":0.76989701,"dec":-22.52206718},
+{"mag":5.36,"ra":0.77582666,"dec":15.47561194},
+{"mag":5.51,"ra":0.78372955,"dec":11.97393464},
+{"mag":4.08,"ra":0.78899727,"dec":24.26737703},
+{"mag":5.98,"ra":0.78989538,"dec":6.74098135},
+{"mag":5.7,"ra":0.79533382,"dec":-18.06142264},
+{"mag":5.42,"ra":0.79611658,"dec":74.84758739},
+{"mag":5.57,"ra":0.8002919,"dec":-21.72247464},
+{"mag":5.86,"ra":0.80246541,"dec":72.67445774},
+{"mag":5.92,"ra":0.8048179,"dec":7.29991977},
+{"mag":5.74,"ra":0.80625919,"dec":5.28338873},
+{"mag":5.09,"ra":0.80975515,"dec":-74.92335356},
+{"mag":4.44,"ra":0.81135982,"dec":7.58520186},
+{"mag":4.9,"ra":0.81388703,"dec":50.96819154},
+{"mag":5.07,"ra":0.81630825,"dec":16.9411337},
+{"mag":3.46,"ra":0.8180835,"dec":57.8165477},
+{"mag":5.9,"ra":0.82052734,"dec":-24.13652681},
+{"mag":5.59,"ra":0.82376491,"dec":-13.56101709},
+{"mag":4.53,"ra":0.83023048,"dec":41.07895474},
+{"mag":5.55,"ra":0.8314191,"dec":27.71031105},
+{"mag":5.17,"ra":0.83547899,"dec":-10.64377045},
+{"mag":5.24,"ra":0.84475779,"dec":-50.98692422},
+{"mag":5.35,"ra":0.84543679,"dec":64.24758084},
+{"mag":5.47,"ra":0.8779447,"dec":-24.00592567},
+{"mag":4.78,"ra":0.88346958,"dec":-1.1442206},
+{"mag":4.8,"ra":0.88452203,"dec":61.12355735},
+{"mag":5.73,"ra":0.89382743,"dec":-62.87135327},
+{"mag":5.8,"ra":0.90978333,"dec":19.18843611},
+{"mag":5.59,"ra":0.91465655,"dec":83.70746159},
+{"mag":5.46,"ra":0.91611663,"dec":23.62844595},
+{"mag":4.83,"ra":0.91672028,"dec":58.97279657},
+{"mag":5.45,"ra":0.91674982,"dec":-69.52697888},
+{"mag":5.88,"ra":0.92844562,"dec":-7.34703997},
+{"mag":5.35,"ra":0.93375167,"dec":-11.26650685},
+{"mag":4.62,"ra":0.94444736,"dec":59.18116582},
+{"mag":2.15,"ra":0.9451392,"dec":60.71674966},
+{"mag":3.86,"ra":0.94586046,"dec":38.49925513},
+{"mag":5.56,"ra":0.94637249,"dec":60.36284769},
+{"mag":4.4,"ra":0.95345215,"dec":23.41775997},
+{"mag":5.44,"ra":0.9639301,"dec":28.9922356},
+{"mag":5.99,"ra":0.97060954,"dec":33.95105921},
+{"mag":5.97,"ra":0.97527748,"dec":66.35182541},
+{"mag":4.3,"ra":0.97676274,"dec":-29.35746436},
+{"mag":5.62,"ra":0.97885764,"dec":-11.37993895},
+{"mag":5.69,"ra":1.00098532,"dec":44.71330426},
+{"mag":5.59,"ra":1.02172928,"dec":-38.91664868},
+{"mag":5.5,"ra":1.04066048,"dec":-31.55204219},
+{"mag":5.5,"ra":1.04696849,"dec":31.80433674},
+{"mag":5.39,"ra":1.0469977,"dec":-46.39733801},
+{"mag":5.95,"ra":1.04840996,"dec":41.34519861},
+{"mag":4.27,"ra":1.04907107,"dec":7.89007256},
+{"mag":5.4,"ra":1.05072351,"dec":-4.83635047},
+{"mag":5.92,"ra":1.06027988,"dec":61.07482982},
+{"mag":5.99,"ra":1.06733002,"dec":52.50230919},
+{"mag":5.83,"ra":1.0720969,"dec":61.58024409},
+{"mag":5.64,"ra":1.08481985,"dec":14.94600386},
+{"mag":5.33,"ra":1.0947021,"dec":21.4732162},
+{"mag":5.55,"ra":1.09491055,"dec":21.46547318},
+{"mag":3.32,"ra":1.10141847,"dec":-46.71849042},
+{"mag":5.58,"ra":1.101425,"dec":-9.83936845},
+{"mag":5.36,"ra":1.12182573,"dec":-61.77526197},
+{"mag":5.71,"ra":1.12947786,"dec":-9.78559168},
+{"mag":5.21,"ra":1.12995146,"dec":-41.48693516},
+{"mag":5.56,"ra":1.13253055,"dec":20.73932115},
+{"mag":5.04,"ra":1.13353292,"dec":43.94224107},
+{"mag":5.17,"ra":1.13692251,"dec":54.92422766},
+{"mag":5.51,"ra":1.13953998,"dec":5.6502213},
+{"mag":3.94,"ra":1.13973891,"dec":-55.24583235},
+{"mag":5.77,"ra":1.14262436,"dec":58.26347937},
+{"mag":3.46,"ra":1.14312879,"dec":-10.181928},
+{"mag":4.24,"ra":1.14559982,"dec":86.25711803},
+{"mag":4.26,"ra":1.15836727,"dec":47.2418241},
+{"mag":2.07,"ra":1.16216599,"dec":35.62083048},
+{"mag":5.57,"ra":1.163668,"dec":19.6583854},
+{"mag":5.67,"ra":1.17190197,"dec":42.08157668},
+{"mag":5.81,"ra":1.17206928,"dec":25.45803989},
+{"mag":5.97,"ra":1.17598814,"dec":2.44570842},
+{"mag":5.32,"ra":1.17757375,"dec":68.77868759},
+{"mag":4.34,"ra":1.18498074,"dec":55.14994765},
+{"mag":5.15,"ra":1.18521479,"dec":31.42476555},
+{"mag":5.8,"ra":1.18619138,"dec":37.72413814},
+{"mag":5.56,"ra":1.19042126,"dec":64.20272388},
+{"mag":4.66,"ra":1.19088726,"dec":21.03467568},
+{"mag":4.51,"ra":1.19432964,"dec":30.08972962},
+{"mag":5.57,"ra":1.19482467,"dec":65.01888517},
+{"mag":5.93,"ra":1.19542848,"dec":-2.25102487},
+{"mag":5.6,"ra":1.20458595,"dec":79.67397492},
+{"mag":5.95,"ra":1.21260197,"dec":-37.85640391},
+{"mag":5.21,"ra":1.22883399,"dec":7.57548895},
+{"mag":4.67,"ra":1.22914867,"dec":24.58376482},
+{"mag":5.97,"ra":1.23545783,"dec":16.13354221},
+{"mag":5.14,"ra":1.23999082,"dec":-7.9235004},
+{"mag":5.7,"ra":1.24699458,"dec":-0.97429411},
+{"mag":4.97,"ra":1.25293547,"dec":-45.53209717},
+{"mag":4.25,"ra":1.26263759,"dec":-68.87623708},
+{"mag":5.87,"ra":1.2699727,"dec":71.74384538},
+{"mag":5.42,"ra":1.27676298,"dec":-2.5002128},
+{"mag":5.13,"ra":1.29666224,"dec":3.61452038},
+{"mag":4.74,"ra":1.3244383,"dec":27.26408682},
+{"mag":5.87,"ra":1.33008114,"dec":-0.5089949},
+{"mag":4.95,"ra":1.33469935,"dec":58.2316161},
+{"mag":5.23,"ra":1.35204276,"dec":28.73838983},
+{"mag":4.87,"ra":1.37233139,"dec":45.5287566},
+{"mag":5.97,"ra":1.39026457,"dec":20.4689899},
+{"mag":5.84,"ra":1.39193557,"dec":-30.94550599},
+{"mag":5.6,"ra":1.39459883,"dec":37.71499034},
+{"mag":3.6,"ra":1.40040311,"dec":-8.18275372},
+{"mag":5.92,"ra":1.40569025,"dec":-6.91466853},
+{"mag":5.42,"ra":1.4113259,"dec":-41.49245885},
+{"mag":5.92,"ra":1.41813208,"dec":-64.3694363},
+{"mag":4.9,"ra":1.42700257,"dec":-14.59875437},
+{"mag":2.66,"ra":1.43016751,"dec":60.23540347},
+{"mag":4.72,"ra":1.4321956,"dec":68.12994739},
+{"mag":5.35,"ra":1.43757739,"dec":19.17232096},
+{"mag":5.98,"ra":1.43849971,"dec":43.45788606},
+{"mag":5.5,"ra":1.44490194,"dec":19.24056476},
+{"mag":5.51,"ra":1.44765455,"dec":-13.05653391},
+{"mag":4.83,"ra":1.46085698,"dec":45.40695287},
+{"mag":3.41,"ra":1.47276157,"dec":-43.31772906},
+{"mag":5.11,"ra":1.49336117,"dec":-21.62934677},
+{"mag":5.27,"ra":1.501695,"dec":47.00737711},
+{"mag":4.84,"ra":1.50303973,"dec":6.14393314},
+{"mag":5.92,"ra":1.50635465,"dec":-26.20785462},
+{"mag":5.82,"ra":1.52042181,"dec":70.2647886},
+{"mag":3.93,"ra":1.5208282,"dec":-49.07307701},
+{"mag":3.62,"ra":1.52472051,"dec":15.34583101},
+{"mag":5.79,"ra":1.52868099,"dec":-30.28292502},
+{"mag":5.49,"ra":1.54890337,"dec":-36.86518161},
+{"mag":5.69,"ra":1.55714106,"dec":58.32734523},
+{"mag":5.75,"ra":1.56187029,"dec":-7.02514279},
+{"mag":4.68,"ra":1.56553499,"dec":59.23209665},
+{"mag":5.9,"ra":1.571277,"dec":37.23719753},
+{"mag":5.62,"ra":1.57714483,"dec":-15.6763527},
+{"mag":5.9,"ra":1.58029093,"dec":18.46067238},
+{"mag":5.95,"ra":1.59851811,"dec":17.43378965},
+{"mag":5.41,"ra":1.59971033,"dec":-15.40021584},
+{"mag":5.69,"ra":1.60234141,"dec":-29.9074336},
+{"mag":4.1,"ra":1.61332694,"dec":41.40638491},
+{"mag":5.54,"ra":1.6183226,"dec":12.14151058},
+{"mag":5.66,"ra":1.62438329,"dec":-84.76965017},
+{"mag":0.45,"ra":1.62854213,"dec":-57.23666007},
+{"mag":5.88,"ra":1.6319389,"dec":-82.97528876},
+{"mag":3.59,"ra":1.6331951,"dec":48.62848641},
+{"mag":5.55,"ra":1.63543436,"dec":57.97764488},
+{"mag":5.94,"ra":1.64097059,"dec":-36.5279533},
+{"mag":5.28,"ra":1.64192808,"dec":73.04007203},
+{"mag":5.58,"ra":1.64769661,"dec":-21.27547447},
+{"mag":5.01,"ra":1.65583862,"dec":44.38612827},
+{"mag":5.98,"ra":1.66132442,"dec":16.40588595},
+{"mag":5.76,"ra":1.66312306,"dec":-56.19644067},
+{"mag":4.96,"ra":1.67633449,"dec":40.57710624},
+{"mag":5.63,"ra":1.67765566,"dec":43.29776385},
+{"mag":4.45,"ra":1.69052987,"dec":5.48760445},
+{"mag":5.97,"ra":1.69423393,"dec":30.04713542},
+{"mag":5.75,"ra":1.69577724,"dec":-11.32366816},
+{"mag":4.96,"ra":1.69625436,"dec":42.61380692},
+{"mag":5.7,"ra":1.69665338,"dec":-60.78924102},
+{"mag":5.7,"ra":1.70083755,"dec":-36.83226421},
+{"mag":5.63,"ra":1.70095971,"dec":35.24576705},
+{"mag":5.25,"ra":1.70240155,"dec":-32.32685759},
+{"mag":5.57,"ra":1.705679,"dec":68.04304624},
+{"mag":5.52,"ra":1.7080975,"dec":-53.7405747},
+{"mag":5.24,"ra":1.70831938,"dec":20.27015091},
+{"mag":4.98,"ra":1.71208803,"dec":-3.69011692},
+{"mag":5.18,"ra":1.71548024,"dec":70.62255881},
+{"mag":5.78,"ra":1.7221493,"dec":60.55137091},
+{"mag":4.01,"ra":1.72767091,"dec":50.6887655},
+{"mag":3.49,"ra":1.73475762,"dec":-15.93955597},
+{"mag":4.26,"ra":1.75655241,"dec":9.15764102},
+{"mag":5.29,"ra":1.76073734,"dec":-25.05243403},
+{"mag":5.37,"ra":1.76646271,"dec":-5.73322696},
+{"mag":5.49,"ra":1.76831278,"dec":-50.81621317},
+{"mag":5.04,"ra":1.76837191,"dec":-53.52218065},
+{"mag":5.63,"ra":1.7955734,"dec":63.85310111},
+{"mag":5.86,"ra":1.80302852,"dec":16.95563093},
+{"mag":5.91,"ra":1.80722884,"dec":3.68540364},
+{"mag":5.94,"ra":1.81078941,"dec":37.95293583},
+{"mag":5.78,"ra":1.81157743,"dec":32.68948705},
+{"mag":4.66,"ra":1.82644197,"dec":-10.68618074},
+{"mag":5.83,"ra":1.83571674,"dec":22.2753566},
+{"mag":5.92,"ra":1.84778166,"dec":11.0434459},
+{"mag":5.94,"ra":1.84846631,"dec":-50.20612713},
+{"mag":5.96,"ra":1.84919125,"dec":51.93369809},
+{"mag":3.74,"ra":1.85766961,"dec":-10.33494526},
+{"mag":5.53,"ra":1.86647427,"dec":55.14740479},
+{"mag":5.7,"ra":1.86926501,"dec":50.79286359},
+{"mag":5.78,"ra":1.88113545,"dec":-16.92912351},
+{"mag":3.42,"ra":1.88469439,"dec":29.57939727},
+{"mag":5.42,"ra":1.88815331,"dec":40.72979974},
+{"mag":3.88,"ra":1.892157,"dec":19.29409264},
+{"mag":4.61,"ra":1.89259348,"dec":3.18747844},
+{"mag":4.39,"ra":1.89411658,"dec":-46.30244631},
+{"mag":5.12,"ra":1.90612786,"dec":-42.49688104},
+{"mag":3.35,"ra":1.90657873,"dec":63.67014686},
+{"mag":2.64,"ra":1.91065251,"dec":20.80829949},
+{"mag":4.68,"ra":1.91555967,"dec":-67.64748114},
+{"mag":5.76,"ra":1.93084223,"dec":23.57734317},
+{"mag":5.89,"ra":1.93179823,"dec":37.27780093},
+{"mag":3.69,"ra":1.93245347,"dec":-51.60958673},
+{"mag":4.97,"ra":1.93333438,"dec":68.68526545},
+{"mag":5.69,"ra":1.93589718,"dec":37.251804},
+{"mag":4.92,"ra":1.94448852,"dec":-22.52671153},
+{"mag":4.82,"ra":1.9527758,"dec":-47.38529869},
+{"mag":5.09,"ra":1.95584261,"dec":17.8175894},
+{"mag":5.84,"ra":1.9621487,"dec":27.8045238},
+{"mag":4.79,"ra":1.96549317,"dec":23.5960961},
+{"mag":5.7,"ra":1.97597211,"dec":49.204252},
+{"mag":2.86,"ra":1.97940884,"dec":-61.56992444},
+{"mag":5.89,"ra":1.99322088,"dec":21.05860461},
+{"mag":5.29,"ra":1.99388597,"dec":64.62163894},
+{"mag":5.57,"ra":1.99412619,"dec":-42.03028941},
+{"mag":5.43,"ra":1.99616341,"dec":-20.82457549},
+{"mag":3.99,"ra":2.00006244,"dec":-21.07777193},
+{"mag":5.89,"ra":2.00250686,"dec":3.09763527},
+{"mag":5.43,"ra":2.00743662,"dec":-8.52382616},
+{"mag":5.34,"ra":2.02077676,"dec":-30.00156583},
+{"mag":5.15,"ra":2.0284451,"dec":-44.71339037},
+{"mag":4.49,"ra":2.03265271,"dec":70.90704605},
+{"mag":3.82,"ra":2.03411128,"dec":2.76376048},
+{"mag":4.99,"ra":2.03835394,"dec":54.48754946},
+{"mag":5.97,"ra":2.04307718,"dec":13.47672808},
+{"mag":5.5,"ra":2.04943523,"dec":33.28415151},
+{"mag":5.87,"ra":2.04959821,"dec":-15.30594985},
+{"mag":5.59,"ra":2.05005238,"dec":64.39002289},
+{"mag":5.42,"ra":2.0532238,"dec":0.12845397},
+{"mag":3.95,"ra":2.05727509,"dec":72.42123962},
+{"mag":5.64,"ra":2.06090623,"dec":25.93544879},
+{"mag":5.61,"ra":2.06124567,"dec":-4.10336397},
+{"mag":5.96,"ra":2.06336751,"dec":-0.34014611},
+{"mag":2.1,"ra":2.06497752,"dec":42.32984832},
+{"mag":4.68,"ra":2.07484168,"dec":-29.29683966},
+{"mag":5.27,"ra":2.08529261,"dec":77.28145654},
+{"mag":5.22,"ra":2.09210494,"dec":76.11511028},
+{"mag":5.03,"ra":2.10942012,"dec":22.64840404},
+{"mag":2.01,"ra":2.11952383,"dec":23.46277743},
+{"mag":4.78,"ra":2.1414294,"dec":37.85918337},
+{"mag":5.66,"ra":2.14460574,"dec":58.42360489},
+{"mag":5.84,"ra":2.15259206,"dec":-43.51647088},
+{"mag":4.98,"ra":2.1570239,"dec":25.93997268},
+{"mag":3.0,"ra":2.15903358,"dec":34.98739204},
+{"mag":5.68,"ra":2.177095,"dec":19.50040351},
+{"mag":5.64,"ra":2.18921181,"dec":8.57008262},
+{"mag":5.94,"ra":2.19328932,"dec":-1.82534866},
+{"mag":4.94,"ra":2.20620108,"dec":30.30321507},
+{"mag":5.96,"ra":2.21042005,"dec":24.16779356},
+{"mag":5.65,"ra":2.21314533,"dec":-2.3934596},
+{"mag":5.23,"ra":2.21332884,"dec":21.21098318},
+{"mag":5.27,"ra":2.21512779,"dec":-30.72384252},
+{"mag":4.36,"ra":2.21666971,"dec":8.8467523},
+{"mag":5.86,"ra":2.2169312,"dec":-21.0002366},
+{"mag":5.72,"ra":2.21756812,"dec":15.27991044},
+{"mag":4.84,"ra":2.22037244,"dec":44.23168903},
+{"mag":5.31,"ra":2.22667214,"dec":51.06623342},
+{"mag":5.57,"ra":2.23736186,"dec":-67.84155199},
+{"mag":5.91,"ra":2.24221158,"dec":-41.16670109},
+{"mag":5.67,"ra":2.25793289,"dec":-67.74633515},
+{"mag":5.57,"ra":2.26189844,"dec":25.0432553},
+{"mag":5.79,"ra":2.26275994,"dec":25.78309877},
+{"mag":5.25,"ra":2.26563753,"dec":33.35897589},
+{"mag":3.56,"ra":2.27513896,"dec":-51.51211145},
+{"mag":5.51,"ra":2.28305263,"dec":-6.4218563},
+{"mag":4.84,"ra":2.28400489,"dec":34.22482985},
+{"mag":4.03,"ra":2.28856547,"dec":33.84732099},
+{"mag":5.75,"ra":2.29995026,"dec":57.89980835},
+{"mag":5.6,"ra":2.30034063,"dec":1.75689975},
+{"mag":5.99,"ra":2.30127764,"dec":57.51632574},
+{"mag":5.58,"ra":2.30209622,"dec":19.90116135},
+{"mag":5.29,"ra":2.31583022,"dec":28.64267411},
+{"mag":5.31,"ra":2.32134656,"dec":47.37998782},
+{"mag":5.81,"ra":2.33173519,"dec":-55.94484169},
+{"mag":5.57,"ra":2.34949247,"dec":50.15154156},
+{"mag":4.08,"ra":2.36250639,"dec":-68.6594239},
+{"mag":5.29,"ra":2.36573195,"dec":0.39569203},
+{"mag":5.43,"ra":2.36706682,"dec":-10.77733458},
+{"mag":5.89,"ra":2.36804921,"dec":-17.66202807},
+{"mag":5.42,"ra":2.37011301,"dec":-0.88474037},
+{"mag":5.16,"ra":2.37262059,"dec":55.84565637},
+{"mag":5.19,"ra":2.37567248,"dec":-23.81631542},
+{"mag":5.81,"ra":2.38065612,"dec":41.39653472},
+{"mag":5.99,"ra":2.38124281,"dec":-73.64582097},
+{"mag":5.9,"ra":2.38184843,"dec":-51.09228926},
+{"mag":5.19,"ra":2.40691499,"dec":50.00663318},
+{"mag":5.48,"ra":2.41362352,"dec":10.61059804},
+{"mag":5.36,"ra":2.41499846,"dec":-60.31162902},
+{"mag":4.73,"ra":2.42705582,"dec":50.27866588},
+{"mag":4.88,"ra":2.4325034,"dec":-12.290452},
+{"mag":5.88,"ra":2.43343779,"dec":-15.34111517},
+{"mag":5.89,"ra":2.44310114,"dec":-20.04286354},
+{"mag":4.24,"ra":2.44975138,"dec":-47.70382692},
+{"mag":5.55,"ra":2.4577189,"dec":31.80134872},
+{"mag":5.13,"ra":2.46713611,"dec":-33.81105246},
+{"mag":4.3,"ra":2.46931052,"dec":8.4600887},
+{"mag":5.29,"ra":2.46944176,"dec":29.66953828},
+{"mag":5.89,"ra":2.48014962,"dec":29.93158402},
+{"mag":4.46,"ra":2.48444116,"dec":67.40238385},
+{"mag":5.88,"ra":2.50897615,"dec":25.23521368},
+{"mag":5.27,"ra":2.52502287,"dec":2.26720689},
+{"mag":5.27,"ra":2.52781132,"dec":-79.10924959},
+{"mag":1.97,"ra":2.52974312,"dec":89.26413805},
+{"mag":4.74,"ra":2.53479923,"dec":-15.2443199},
+{"mag":5.15,"ra":2.53503775,"dec":36.14723132},
+{"mag":5.36,"ra":2.53595453,"dec":-1.03481751},
+{"mag":5.84,"ra":2.54796056,"dec":34.54245642},
+{"mag":5.91,"ra":2.55195525,"dec":-34.64992327},
+{"mag":4.96,"ra":2.56408677,"dec":-28.2323401},
+{"mag":5.74,"ra":2.57849712,"dec":-7.8592885},
+{"mag":5.72,"ra":2.59409508,"dec":37.3122905},
+{"mag":5.38,"ra":2.59633263,"dec":34.68768289},
+{"mag":4.87,"ra":2.59791361,"dec":5.59330163},
+{"mag":5.53,"ra":2.60001891,"dec":-7.83145306},
+{"mag":5.79,"ra":2.60106457,"dec":6.88336423},
+{"mag":5.74,"ra":2.60257679,"dec":-30.04496366},
+{"mag":5.81,"ra":2.60975102,"dec":7.73007761},
+{"mag":5.64,"ra":2.61048574,"dec":12.44784628},
+{"mag":5.91,"ra":2.61585531,"dec":38.73398283},
+{"mag":5.78,"ra":2.61628357,"dec":-34.57734519},
+{"mag":5.3,"ra":2.6234069,"dec":-52.54308845},
+{"mag":5.8,"ra":2.62666855,"dec":65.74535775},
+{"mag":5.65,"ra":2.62827153,"dec":-3.39606767},
+{"mag":5.17,"ra":2.63391336,"dec":72.81821481},
+{"mag":5.84,"ra":2.63849879,"dec":-30.19388274},
+{"mag":5.45,"ra":2.64694416,"dec":21.96144509},
+{"mag":4.08,"ra":2.65804119,"dec":0.3285168},
+{"mag":4.83,"ra":2.65936992,"dec":-11.87158159},
+{"mag":4.12,"ra":2.65978435,"dec":-68.2669476},
+{"mag":4.74,"ra":2.66331092,"dec":-42.89163328},
+{"mag":5.79,"ra":2.67013991,"dec":-9.45268375},
+{"mag":5.21,"ra":2.67766108,"dec":-54.54992422},
+{"mag":4.11,"ra":2.6777588,"dec":-39.85530905},
+{"mag":5.3,"ra":2.67806479,"dec":27.06100903},
+{"mag":5.72,"ra":2.68718634,"dec":-0.69534847},
+{"mag":5.98,"ra":2.69281459,"dec":-14.54941172},
+{"mag":5.99,"ra":2.70183099,"dec":-38.3837178},
+{"mag":4.91,"ra":2.7041469,"dec":40.19438688},
+{"mag":5.74,"ra":2.70608961,"dec":20.0115769},
+{"mag":5.4,"ra":2.70921068,"dec":-50.80082665},
+{"mag":5.85,"ra":2.71651871,"dec":53.5261822},
+{"mag":5.76,"ra":2.71744518,"dec":55.10607111},
+{"mag":3.47,"ra":2.72170126,"dec":3.23617162},
+{"mag":4.65,"ra":2.72419735,"dec":27.70717078},
+{"mag":5.43,"ra":2.73476614,"dec":44.2970548},
+{"mag":4.24,"ra":2.73537623,"dec":-13.85867594},
+{"mag":4.1,"ra":2.73657999,"dec":49.22866639},
+{"mag":5.78,"ra":2.74249199,"dec":15.31189952},
+{"mag":5.95,"ra":2.74713058,"dec":67.82470926},
+{"mag":4.27,"ra":2.7489926,"dec":10.11421979},
+{"mag":5.17,"ra":2.74930761,"dec":12.44596709},
+{"mag":4.47,"ra":2.75166151,"dec":-18.57265077},
+{"mag":5.73,"ra":2.75762572,"dec":-63.70453152},
+{"mag":4.83,"ra":2.75903683,"dec":-67.616724},
+{"mag":5.8,"ra":2.79656517,"dec":81.44866603},
+{"mag":4.52,"ra":2.79845596,"dec":29.24742385},
+{"mag":5.83,"ra":2.80890642,"dec":18.28387012},
+{"mag":5.89,"ra":2.81274148,"dec":25.18807322},
+{"mag":5.25,"ra":2.81704637,"dec":-62.80659207},
+{"mag":4.45,"ra":2.8181554,"dec":-32.40628403},
+{"mag":5.26,"ra":2.8215438,"dec":17.46434448},
+{"mag":5.39,"ra":2.83170863,"dec":-27.94203549},
+{"mag":3.61,"ra":2.8330526,"dec":27.26079044},
+{"mag":5.92,"ra":2.83742968,"dec":-35.84368582},
+{"mag":4.76,"ra":2.84126023,"dec":-75.06688108},
+{"mag":4.22,"ra":2.84303172,"dec":38.31890838},
+{"mag":5.48,"ra":2.84455664,"dec":-35.67571664},
+{"mag":3.77,"ra":2.84494243,"dec":55.89552955},
+{"mag":4.76,"ra":2.85065164,"dec":-21.0039789},
+{"mag":5.52,"ra":2.85821331,"dec":15.08212726},
+{"mag":4.56,"ra":2.85856414,"dec":35.05989415},
+{"mag":5.86,"ra":2.86159789,"dec":46.84200204},
+{"mag":5.94,"ra":2.866319,"dec":68.88851683},
+{"mag":5.93,"ra":2.89287589,"dec":-38.43708698},
+{"mag":5.93,"ra":2.89313026,"dec":-22.37612257},
+{"mag":5.34,"ra":2.8951606,"dec":38.33767914},
+{"mag":3.93,"ra":2.90429513,"dec":52.76248991},
+{"mag":5.76,"ra":2.93013966,"dec":18.33167607},
+{"mag":5.59,"ra":2.93242863,"dec":61.52106281},
+{"mag":5.97,"ra":2.9371468,"dec":8.38177807},
+{"mag":3.89,"ra":2.94044549,"dec":-8.89760976},
+{"mag":5.58,"ra":2.94055065,"dec":18.02365076},
+{"mag":5.16,"ra":2.94373476,"dec":-3.71221461},
+{"mag":5.1,"ra":2.95480013,"dec":31.93429432},
+{"mag":5.44,"ra":2.95658368,"dec":-23.8620767},
+{"mag":5.8,"ra":2.96807643,"dec":20.66881016},
+{"mag":5.82,"ra":2.96824664,"dec":-23.60613828},
+{"mag":2.88,"ra":2.97103212,"dec":-40.30473491},
+{"mag":5.22,"ra":2.97835933,"dec":-2.78272383},
+{"mag":4.68,"ra":2.97934735,"dec":39.66282739},
+{"mag":4.98,"ra":2.979935,"dec":-64.07129717},
+{"mag":4.94,"ra":2.98436382,"dec":35.18311415},
+{"mag":4.63,"ra":2.98687051,"dec":21.34044477},
+{"mag":5.69,"ra":2.99335152,"dec":-25.27433851},
+{"mag":5.89,"ra":2.99440778,"dec":41.03305347},
+{"mag":5.56,"ra":2.99476734,"dec":-2.46490094},
+{"mag":4.71,"ra":2.99524897,"dec":8.90740111},
+{"mag":5.47,"ra":2.99716183,"dec":47.22063875},
+{"mag":5.93,"ra":3.01224811,"dec":10.87047197},
+{"mag":5.24,"ra":3.01449556,"dec":52.35179769},
+{"mag":5.75,"ra":3.01943516,"dec":-7.66283629},
+{"mag":5.88,"ra":3.02706953,"dec":-28.09048221},
+{"mag":5.91,"ra":3.03170844,"dec":26.46234187},
+{"mag":5.84,"ra":3.0322481,"dec":-9.96139327},
+{"mag":5.51,"ra":3.03761036,"dec":-71.90249547},
+{"mag":2.54,"ra":3.03799418,"dec":4.08992539},
+{"mag":5.62,"ra":3.03958558,"dec":4.35287042},
+{"mag":4.08,"ra":3.03988697,"dec":-23.62433613},
+{"mag":5.32,"ra":3.04507202,"dec":-7.68546315},
+{"mag":5.81,"ra":3.04884491,"dec":-46.97504226},
+{"mag":5.12,"ra":3.06025103,"dec":-59.73761994},
+{"mag":5.26,"ra":3.07124367,"dec":-7.60089934},
+{"mag":2.91,"ra":3.07994173,"dec":53.50645031},
+{"mag":3.32,"ra":3.08624916,"dec":38.84053298},
+{"mag":5.45,"ra":3.09074647,"dec":25.25519906},
+{"mag":4.77,"ra":3.09234047,"dec":56.7055481},
+{"mag":5.49,"ra":3.10220893,"dec":79.41851027},
+{"mag":5.64,"ra":3.10657987,"dec":13.18740263},
+{"mag":5.23,"ra":3.10930225,"dec":-6.08854227},
+{"mag":5.89,"ra":3.12194912,"dec":64.05760178},
+{"mag":5.67,"ra":3.125528,"dec":-78.98942329},
+{"mag":2.09,"ra":3.13614714,"dec":40.9556512},
+{"mag":4.05,"ra":3.1508009,"dec":49.61350009},
+{"mag":3.79,"ra":3.1582303,"dec":44.85788896},
+{"mag":5.74,"ra":3.16020212,"dec":29.07711221},
+{"mag":5.97,"ra":3.17743759,"dec":11.87269252},
+{"mag":4.61,"ra":3.18816707,"dec":39.61157075},
+{"mag":4.35,"ra":3.19379712,"dec":19.72669777},
+{"mag":5.92,"ra":3.19523682,"dec":81.47071191},
+{"mag":4.85,"ra":3.19895514,"dec":74.39386878},
+{"mag":3.8,"ra":3.20118888,"dec":-28.98910623},
+{"mag":5.78,"ra":3.20395516,"dec":27.25701296},
+{"mag":5.92,"ra":3.20713306,"dec":-44.41965395},
+{"mag":5.55,"ra":3.20732497,"dec":6.66088598},
+{"mag":5.71,"ra":3.20920552,"dec":-57.32158199},
+{"mag":5.07,"ra":3.21286767,"dec":-1.19593294},
+{"mag":5.93,"ra":3.22329397,"dec":48.17699884},
+{"mag":4.87,"ra":3.24836521,"dec":21.04462873},
+{"mag":5.61,"ra":3.25567989,"dec":30.55667481},
+{"mag":5.79,"ra":3.26332572,"dec":57.14062522},
+{"mag":4.8,"ra":3.26389633,"dec":-8.8198405},
+{"mag":5.51,"ra":3.26593279,"dec":-77.38860498},
+{"mag":5.04,"ra":3.27005684,"dec":50.93771066},
+{"mag":5.98,"ra":3.2764423,"dec":32.18421948},
+{"mag":5.84,"ra":3.29072278,"dec":-47.7517377},
+{"mag":5.53,"ra":3.29568586,"dec":-62.57689893},
+{"mag":5.97,"ra":3.29603814,"dec":39.28341373},
+{"mag":5.49,"ra":3.29648106,"dec":44.02508193},
+{"mag":5.93,"ra":3.30069222,"dec":-28.797036},
+{"mag":5.24,"ra":3.3030936,"dec":-62.50793537},
+{"mag":4.86,"ra":3.30613767,"dec":-22.51114978},
+{"mag":5.62,"ra":3.30618855,"dec":-0.93014105},
+{"mag":5.16,"ra":3.31047801,"dec":50.22223526},
+{"mag":5.72,"ra":3.31140901,"dec":-18.55964006},
+{"mag":4.85,"ra":3.31217331,"dec":34.2226737},
+{"mag":5.05,"ra":3.31878291,"dec":50.09502752},
+{"mag":4.84,"ra":3.32264969,"dec":3.36997055},
+{"mag":3.7,"ra":3.32526935,"dec":-21.7579421},
+{"mag":5.63,"ra":3.32636198,"dec":-24.1228468},
+{"mag":4.26,"ra":3.33145134,"dec":-43.07154929},
+{"mag":5.91,"ra":3.33217024,"dec":27.07130717},
+{"mag":4.74,"ra":3.33312687,"dec":65.65232717},
+{"mag":5.44,"ra":3.33877233,"dec":77.73490142},
+{"mag":4.47,"ra":3.33899063,"dec":29.04849835},
+{"mag":5.7,"ra":3.35188072,"dec":3.67568149},
+{"mag":5.27,"ra":3.35378081,"dec":21.14714057},
+{"mag":5.5,"ra":3.35667374,"dec":-23.63508924},
+{"mag":4.96,"ra":3.35739087,"dec":43.32965174},
+{"mag":5.94,"ra":3.36454772,"dec":49.07105892},
+{"mag":5.55,"ra":3.36996958,"dec":27.60757659},
+{"mag":5.1,"ra":3.37924226,"dec":20.7421051},
+{"mag":5.32,"ra":3.38699344,"dec":49.2133301},
+{"mag":5.5,"ra":3.40512911,"dec":24.72418789},
+{"mag":1.79,"ra":3.40537459,"dec":49.86124281},
+{"mag":5.78,"ra":3.4082442,"dec":33.53601771},
+{"mag":5.13,"ra":3.41126703,"dec":64.58599618},
+{"mag":3.61,"ra":3.413566,"dec":9.02906504},
+{"mag":5.96,"ra":3.42673707,"dec":-69.33659399},
+{"mag":5.93,"ra":3.43958881,"dec":-27.3176091},
+{"mag":3.73,"ra":3.45281136,"dec":9.7327724},
+{"mag":5.71,"ra":3.45926826,"dec":-35.68133899},
+{"mag":5.74,"ra":3.46693002,"dec":-11.28648689},
+{"mag":4.99,"ra":3.46751392,"dec":49.06293148},
+{"mag":5.72,"ra":3.4724111,"dec":33.80769703},
+{"mag":5.58,"ra":3.48119638,"dec":49.84844583},
+{"mag":4.21,"ra":3.48448178,"dec":59.94033461},
+{"mag":4.67,"ra":3.48945286,"dec":49.50901919},
+{"mag":4.71,"ra":3.48949623,"dec":-62.93843436},
+{"mag":5.57,"ra":3.4933396,"dec":-12.67474889},
+{"mag":4.55,"ra":3.49854055,"dec":58.87875244},
+{"mag":5.76,"ra":3.49866523,"dec":-42.63425261},
+{"mag":5.68,"ra":3.49970162,"dec":-78.35178497},
+{"mag":5.09,"ra":3.50006398,"dec":55.45183695},
+{"mag":5.14,"ra":3.50679886,"dec":11.33648129},
+{"mag":4.36,"ra":3.50957839,"dec":47.99517199},
+{"mag":5.98,"ra":3.51024956,"dec":-47.3751741},
+{"mag":5.82,"ra":3.51025893,"dec":48.10365477},
+{"mag":4.74,"ra":3.51029163,"dec":-5.07516332},
+{"mag":5.93,"ra":3.51260973,"dec":6.18874381},
+{"mag":5.81,"ra":3.51435624,"dec":-66.4897181},
+{"mag":4.14,"ra":3.51454638,"dec":12.93668186},
+{"mag":5.47,"ra":3.53571692,"dec":48.02353391},
+{"mag":5.62,"ra":3.53880973,"dec":84.91136314},
+{"mag":5.3,"ra":3.54064003,"dec":46.05704336},
+{"mag":5.67,"ra":3.54297683,"dec":-50.37884857},
+{"mag":5.76,"ra":3.54331386,"dec":9.37355768},
+{"mag":5.91,"ra":3.54445047,"dec":35.46172039},
+{"mag":3.72,"ra":3.549006,"dec":-9.45830584},
+{"mag":5.79,"ra":3.55972843,"dec":39.89959026},
+{"mag":5.98,"ra":3.56086163,"dec":54.97486087},
+{"mag":4.26,"ra":3.56312442,"dec":-21.63281597},
+{"mag":5.95,"ra":3.574062,"dec":24.46447543},
+{"mag":5.56,"ra":3.5993478,"dec":-11.19397792},
+{"mag":5.24,"ra":3.60483116,"dec":-17.46704107},
+{"mag":4.32,"ra":3.60815558,"dec":48.19270068},
+{"mag":5.82,"ra":3.61314132,"dec":0.58815498},
+{"mag":4.29,"ra":3.61458859,"dec":0.40283316},
+{"mag":4.57,"ra":3.61824392,"dec":-40.27451075},
+{"mag":5.86,"ra":3.64145951,"dec":-7.39170945},
+{"mag":5.97,"ra":3.65031269,"dec":-5.62570656},
+{"mag":5.55,"ra":3.66420657,"dec":3.05684307},
+{"mag":5.53,"ra":3.67731475,"dec":-5.21069726},
+{"mag":5.55,"ra":3.68551145,"dec":37.58026421},
+{"mag":5.06,"ra":3.70259638,"dec":63.21675891},
+{"mag":4.99,"ra":3.70413865,"dec":-31.93839587},
+{"mag":5.68,"ra":3.70526244,"dec":19.70028593},
+{"mag":4.97,"ra":3.70628987,"dec":33.96503899},
+{"mag":5.74,"ra":3.71187061,"dec":59.96938466},
+{"mag":4.59,"ra":3.71392279,"dec":-37.31334485},
+{"mag":3.01,"ra":3.71541169,"dec":47.7876533},
+{"mag":3.52,"ra":3.72082113,"dec":-9.76519868},
+{"mag":5.59,"ra":3.72606623,"dec":-10.48561144},
+{"mag":3.84,"ra":3.73654302,"dec":-64.80709398},
+{"mag":3.84,"ra":3.73864623,"dec":32.28827325},
+{"mag":5.24,"ra":3.74180777,"dec":-1.16307844},
+{"mag":5.6,"ra":3.74205467,"dec":36.46020384},
+{"mag":5.45,"ra":3.74672281,"dec":24.28957712},
+{"mag":3.72,"ra":3.7479232,"dec":24.1134484},
+{"mag":5.56,"ra":3.74901737,"dec":-0.29671559},
+{"mag":5.66,"ra":3.75270189,"dec":24.83937337},
+{"mag":3.77,"ra":3.75323428,"dec":42.57854437},
+{"mag":4.3,"ra":3.75346725,"dec":24.46737879},
+{"mag":5.72,"ra":3.75441089,"dec":-47.35945424},
+{"mag":5.34,"ra":3.76123067,"dec":6.05002905},
+{"mag":3.87,"ra":3.76377586,"dec":24.36785796},
+{"mag":5.76,"ra":3.76512885,"dec":24.55462128},
+{"mag":5.66,"ra":3.76645697,"dec":45.68194432},
+{"mag":5.79,"ra":3.76689324,"dec":67.20188088},
+{"mag":4.78,"ra":3.76731462,"dec":63.34506772},
+{"mag":4.43,"ra":3.76902844,"dec":-12.1017353},
+{"mag":5.91,"ra":3.76926774,"dec":6.80365522},
+{"mag":4.14,"ra":3.77210009,"dec":23.94846207},
+{"mag":5.91,"ra":3.77428437,"dec":-29.33816606},
+{"mag":4.22,"ra":3.78083028,"dec":-23.248438},
+{"mag":3.26,"ra":3.78728653,"dec":-74.23924251},
+{"mag":2.85,"ra":3.79140671,"dec":24.10524193},
+{"mag":5.24,"ra":3.79433898,"dec":-23.87479582},
+{"mag":5.52,"ra":3.79889527,"dec":-30.16732063},
+{"mag":5.08,"ra":3.80451445,"dec":11.14336637},
+{"mag":5.44,"ra":3.80577895,"dec":23.42136355},
+{"mag":5.81,"ra":3.80992305,"dec":-20.90293608},
+{"mag":4.3,"ra":3.80995081,"dec":-37.62012878},
+{"mag":5.91,"ra":3.81081008,"dec":0.22787124},
+{"mag":5.95,"ra":3.818923,"dec":43.96302293},
+{"mag":3.62,"ra":3.81936977,"dec":24.05352412},
+{"mag":5.05,"ra":3.81977891,"dec":24.13682565},
+{"mag":5.4,"ra":3.82047243,"dec":70.87120237},
+{"mag":4.17,"ra":3.82424469,"dec":-36.2001125},
+{"mag":4.39,"ra":3.82535706,"dec":65.52600645},
+{"mag":5.14,"ra":3.82575068,"dec":33.09138142},
+{"mag":5.82,"ra":3.82683922,"dec":63.29710438},
+{"mag":5.65,"ra":3.83456984,"dec":44.96792105},
+{"mag":5.24,"ra":3.83858744,"dec":25.57964862},
+{"mag":4.59,"ra":3.83929883,"dec":71.33236777},
+{"mag":5.78,"ra":3.86492121,"dec":34.3591292},
+{"mag":5.66,"ra":3.86672901,"dec":6.53491424},
+{"mag":5.48,"ra":3.87823723,"dec":-5.36124167},
+{"mag":5.97,"ra":3.88609957,"dec":17.32715595},
+{"mag":5.93,"ra":3.8925844,"dec":-46.8935886},
+{"mag":5.76,"ra":3.89407502,"dec":48.65056848},
+{"mag":5.11,"ra":3.8941456,"dec":-34.73229529},
+{"mag":4.64,"ra":3.89518971,"dec":-24.61221253},
+{"mag":5.8,"ra":3.89533125,"dec":57.97536931},
+{"mag":2.84,"ra":3.90219957,"dec":31.88365776},
+{"mag":4.46,"ra":3.90485739,"dec":-2.95473348},
+{"mag":5.7,"ra":3.90643845,"dec":-40.357029},
+{"mag":5.99,"ra":3.92115938,"dec":-12.09905104},
+{"mag":5.39,"ra":3.93282163,"dec":47.87147012},
+{"mag":5.49,"ra":3.94130224,"dec":35.0809084},
+{"mag":5.28,"ra":3.94345438,"dec":50.69569169},
+{"mag":5.62,"ra":3.94778688,"dec":22.47825021},
+{"mag":4.99,"ra":3.95230352,"dec":61.10891703},
+{"mag":4.95,"ra":3.95706542,"dec":63.07224944},
+{"mag":2.9,"ra":3.96422809,"dec":40.01027315},
+{"mag":2.97,"ra":3.96714724,"dec":-13.50824471},
+{"mag":4.56,"ra":3.97909374,"dec":-61.40015059},
+{"mag":5.85,"ra":3.98122812,"dec":-5.46952376},
+{"mag":3.98,"ra":3.98274992,"dec":35.79102701},
+{"mag":5.61,"ra":3.99170349,"dec":-12.57433214},
+{"mag":4.62,"ra":3.99874336,"dec":-24.01625677},
+{"mag":5.93,"ra":4.01128429,"dec":-30.49070974},
+{"mag":3.41,"ra":4.01133906,"dec":12.49037571},
+{"mag":5.89,"ra":4.01352385,"dec":18.19406866},
+{"mag":4.48,"ra":4.01494584,"dec":-62.15936923},
+{"mag":4.97,"ra":4.0216864,"dec":-61.07905148},
+{"mag":5.28,"ra":4.02556496,"dec":-1.54962625},
+{"mag":5.67,"ra":4.02948139,"dec":9.99801393},
+{"mag":5.38,"ra":4.04351575,"dec":-0.26831052},
+{"mag":3.91,"ra":4.05260466,"dec":5.98930909},
+{"mag":5.32,"ra":4.06238995,"dec":5.43563754},
+{"mag":5.45,"ra":4.06569585,"dec":8.19720135},
+{"mag":5.36,"ra":4.06938545,"dec":2.82725258},
+{"mag":5.46,"ra":4.07268713,"dec":24.1060264},
+{"mag":5.62,"ra":4.072974,"dec":-12.79233884},
+{"mag":5.0,"ra":4.07421213,"dec":59.15550819},
+{"mag":4.36,"ra":4.07823829,"dec":22.0820679},
+{"mag":5.9,"ra":4.08893042,"dec":22.00922152},
+{"mag":5.59,"ra":4.09369552,"dec":-27.65203636},
+{"mag":5.88,"ra":4.10088065,"dec":68.67996526},
+{"mag":4.25,"ra":4.10973758,"dec":50.35135022},
+{"mag":5.18,"ra":4.11011055,"dec":27.60002519},
+{"mag":5.21,"ra":4.11681038,"dec":29.00128762},
+{"mag":5.89,"ra":4.13316983,"dec":17.33992101},
+{"mag":5.52,"ra":4.14347081,"dec":38.04022796},
+{"mag":3.96,"ra":4.14435368,"dec":47.71259359},
+{"mag":5.94,"ra":4.15043351,"dec":13.39829829},
+{"mag":5.51,"ra":4.15275015,"dec":19.60929366},
+{"mag":5.45,"ra":4.15495452,"dec":-16.38587725},
+{"mag":5.84,"ra":4.16672884,"dec":86.62635165},
+{"mag":5.1,"ra":4.16744046,"dec":80.69867409},
+{"mag":5.44,"ra":4.17292217,"dec":-6.92382327},
+{"mag":5.7,"ra":4.1799268,"dec":-8.81982097},
+{"mag":5.39,"ra":4.18052249,"dec":26.48103948},
+{"mag":4.93,"ra":4.18067583,"dec":-41.99374121},
+{"mag":5.75,"ra":4.18306167,"dec":33.5868138},
+{"mag":5.71,"ra":4.18894325,"dec":5.52303505},
+{"mag":5.8,"ra":4.19338206,"dec":-20.35627812},
+{"mag":4.04,"ra":4.19775922,"dec":-6.8377787},
+{"mag":5.29,"ra":4.22586282,"dec":7.7160341},
+{"mag":4.84,"ra":4.23233081,"dec":9.26389844},
+{"mag":3.85,"ra":4.23335592,"dec":-42.29387294},
+{"mag":4.87,"ra":4.23991476,"dec":-10.2558889},
+{"mag":3.33,"ra":4.24039753,"dec":-62.47397888},
+{"mag":5.22,"ra":4.24339945,"dec":10.01143911},
+{"mag":5.45,"ra":4.24681922,"dec":-62.19204942},
+{"mag":4.67,"ra":4.24814171,"dec":40.48372394},
+{"mag":4.12,"ra":4.24829381,"dec":48.40937312},
+{"mag":4.43,"ra":4.25489948,"dec":-7.64455846},
+{"mag":4.27,"ra":4.25890144,"dec":8.89240989},
+{"mag":4.26,"ra":4.26708095,"dec":-51.48709578},
+{"mag":4.44,"ra":4.27474542,"dec":-59.30174841},
+{"mag":5.2,"ra":4.27864029,"dec":53.61180318},
+{"mag":5.69,"ra":4.28154112,"dec":61.85004125},
+{"mag":5.72,"ra":4.28557562,"dec":57.86047655},
+{"mag":4.93,"ra":4.28769059,"dec":20.57874033},
+{"mag":5.95,"ra":4.28867529,"dec":-6.47215975},
+{"mag":5.88,"ra":4.29451813,"dec":-63.25549171},
+{"mag":3.55,"ra":4.29822737,"dec":-33.79833145},
+{"mag":5.67,"ra":4.29977129,"dec":-80.21418106},
+{"mag":4.6,"ra":4.30404874,"dec":50.29563944},
+{"mag":5.64,"ra":4.30642824,"dec":21.57937928},
+{"mag":5.46,"ra":4.32032839,"dec":50.04883763},
+{"mag":5.33,"ra":4.32129032,"dec":-44.26783026},
+{"mag":5.5,"ra":4.32391081,"dec":21.14241058},
+{"mag":5.34,"ra":4.32685749,"dec":21.77359174},
+{"mag":3.65,"ra":4.32987052,"dec":15.62770031},
+{"mag":5.58,"ra":4.33267633,"dec":14.03524954},
+{"mag":5.55,"ra":4.33653117,"dec":50.92095135},
+{"mag":5.95,"ra":4.33733814,"dec":41.80815345},
+{"mag":4.97,"ra":4.33923187,"dec":27.35094069},
+{"mag":4.93,"ra":4.34018223,"dec":34.56674228},
+{"mag":5.26,"ra":4.34340131,"dec":15.09550358},
+{"mag":5.38,"ra":4.34416588,"dec":-20.63959902},
+{"mag":5.26,"ra":4.34454581,"dec":65.14045287},
+{"mag":5.76,"ra":4.34479262,"dec":6.13090686},
+{"mag":5.85,"ra":4.34523107,"dec":-7.59249081},
+{"mag":5.78,"ra":4.3494532,"dec":-81.58022679},
+{"mag":5.86,"ra":4.35751392,"dec":-0.09786658},
+{"mag":4.8,"ra":4.35920796,"dec":46.4989629},
+{"mag":5.4,"ra":4.36321752,"dec":60.73590167},
+{"mag":5.91,"ra":4.3643948,"dec":56.50630039},
+{"mag":5.24,"ra":4.36478215,"dec":-63.38681514},
+{"mag":5.72,"ra":4.3676249,"dec":14.07725051},
+{"mag":5.91,"ra":4.37298084,"dec":20.82141842},
+{"mag":5.38,"ra":4.37636956,"dec":25.62935771},
+{"mag":3.77,"ra":4.38222981,"dec":17.5425843},
+{"mag":5.81,"ra":4.38490582,"dec":-24.89211883},
+{"mag":5.64,"ra":4.39027732,"dec":16.77732694},
+{"mag":5.17,"ra":4.39468898,"dec":-3.74533244},
+{"mag":5.1,"ra":4.39773267,"dec":9.46098377},
+{"mag":3.97,"ra":4.40060148,"dec":-34.01698632},
+{"mag":4.8,"ra":4.4015816,"dec":17.44421161},
+{"mag":5.73,"ra":4.40809465,"dec":34.1308408},
+{"mag":5.77,"ra":4.41039558,"dec":33.95988843},
+{"mag":5.97,"ra":4.41584991,"dec":19.0420923},
+{"mag":5.94,"ra":4.41815558,"dec":-61.23824628},
+{"mag":4.21,"ra":4.42280521,"dec":22.29398098},
+{"mag":5.27,"ra":4.42359573,"dec":22.2001124},
+{"mag":4.3,"ra":4.42481039,"dec":17.92798917},
+{"mag":5.29,"ra":4.4350715,"dec":31.43920664},
+{"mag":4.28,"ra":4.43844298,"dec":22.81369394},
+{"mag":4.48,"ra":4.43907547,"dec":15.6183462},
+{"mag":4.69,"ra":4.44343799,"dec":14.71385764},
+{"mag":5.42,"ra":4.45080407,"dec":80.82421018},
+{"mag":5.53,"ra":4.45484658,"dec":22.99636881},
+{"mag":5.87,"ra":4.45799167,"dec":11.21233208},
+{"mag":5.74,"ra":4.46278973,"dec":-62.52121428},
+{"mag":5.72,"ra":4.4668671,"dec":21.62000558},
+{"mag":5.51,"ra":4.47035983,"dec":83.80776284},
+{"mag":5.9,"ra":4.47314908,"dec":14.74102599},
+{"mag":4.96,"ra":4.47399031,"dec":16.35962902},
+{"mag":5.53,"ra":4.47558591,"dec":1.38087416},
+{"mag":3.84,"ra":4.4762312,"dec":15.96221721},
+{"mag":3.53,"ra":4.47692591,"dec":19.18052092},
+{"mag":5.95,"ra":4.477504,"dec":-19.45859808},
+{"mag":3.4,"ra":4.47768747,"dec":15.8709468},
+{"mag":5.02,"ra":4.48058362,"dec":13.04763905},
+{"mag":5.61,"ra":4.48525702,"dec":-13.04836725},
+{"mag":5.47,"ra":4.50016631,"dec":83.34013144},
+{"mag":5.58,"ra":4.50237023,"dec":15.63789864},
+{"mag":4.78,"ra":4.50932474,"dec":16.19407556},
+{"mag":5.4,"ra":4.51036071,"dec":13.72445018},
+{"mag":5.47,"ra":4.51078518,"dec":15.69193829},
+{"mag":5.95,"ra":4.5112026,"dec":-35.65358006},
+{"mag":5.07,"ra":4.51391602,"dec":-44.95374351},
+{"mag":4.91,"ra":4.53129707,"dec":-0.04399115},
+{"mag":5.78,"ra":4.53384527,"dec":53.91084467},
+{"mag":5.76,"ra":4.54376189,"dec":-3.20950026},
+{"mag":5.94,"ra":4.55850598,"dec":72.52882555},
+{"mag":4.49,"ra":4.55850819,"dec":-29.76583186},
+{"mag":5.79,"ra":4.55947216,"dec":-62.82363051},
+{"mag":4.65,"ra":4.56412643,"dec":14.84448749},
+{"mag":5.71,"ra":4.5652027,"dec":-6.73889608},
+{"mag":3.3,"ra":4.56658845,"dec":-55.04500559},
+{"mag":5.67,"ra":4.56896556,"dec":5.56863495},
+{"mag":5.2,"ra":4.56990048,"dec":-8.23135939},
+{"mag":5.24,"ra":4.56994214,"dec":-8.96998497},
+{"mag":5.88,"ra":4.57722002,"dec":28.96120368},
+{"mag":3.81,"ra":4.59251991,"dec":-30.56231049},
+{"mag":4.25,"ra":4.59423154,"dec":10.16091706},
+{"mag":0.87,"ra":4.59866679,"dec":16.50976164},
+{"mag":3.93,"ra":4.60531682,"dec":-3.352448},
+{"mag":5.91,"ra":4.60673125,"dec":64.26162001},
+{"mag":4.25,"ra":4.61150934,"dec":41.26485467},
+{"mag":5.59,"ra":4.61268823,"dec":-62.07698129},
+{"mag":5.32,"ra":4.62046562,"dec":0.99832711},
+{"mag":5.22,"ra":4.62669628,"dec":-2.47339212},
+{"mag":5.78,"ra":4.63593787,"dec":16.03338888},
+{"mag":4.27,"ra":4.63594491,"dec":12.51087423},
+{"mag":3.86,"ra":4.63635303,"dec":-14.303587},
+{"mag":5.85,"ra":4.6377329,"dec":20.68474222},
+{"mag":4.99,"ra":4.64822048,"dec":-12.12307828},
+{"mag":5.38,"ra":4.65169524,"dec":7.87098753},
+{"mag":5.08,"ra":4.6525548,"dec":15.80003442},
+{"mag":4.67,"ra":4.65456995,"dec":15.9180242},
+{"mag":5.46,"ra":4.65545502,"dec":-14.35888729},
+{"mag":5.07,"ra":4.66519087,"dec":53.07957406},
+{"mag":5.36,"ra":4.66612044,"dec":53.47323647},
+{"mag":5.45,"ra":4.66761618,"dec":12.19764088},
+{"mag":5.56,"ra":4.66856839,"dec":-24.48241131},
+{"mag":4.32,"ra":4.67402609,"dec":-19.67125686},
+{"mag":4.44,"ra":4.67606197,"dec":-41.86357034},
+{"mag":5.73,"ra":4.68881548,"dec":28.61506693},
+{"mag":5.66,"ra":4.69002482,"dec":48.30098864},
+{"mag":5.97,"ra":4.6972436,"dec":38.28042013},
+{"mag":5.04,"ra":4.7009573,"dec":-37.14476616},
+{"mag":4.27,"ra":4.7040843,"dec":22.95697545},
+{"mag":5.3,"ra":4.71290459,"dec":-50.48141805},
+{"mag":5.3,"ra":4.71508302,"dec":43.36526451},
+{"mag":5.53,"ra":4.71776299,"dec":-70.93111187},
+{"mag":5.66,"ra":4.71925383,"dec":-30.76539538},
+{"mag":5.86,"ra":4.72266623,"dec":49.97382624},
+{"mag":5.98,"ra":4.72631328,"dec":-8.79424587},
+{"mag":5.78,"ra":4.73481056,"dec":-8.50357425},
+{"mag":5.53,"ra":4.7355416,"dec":-18.66654311},
+{"mag":5.28,"ra":4.73919976,"dec":-59.73284052},
+{"mag":5.39,"ra":4.74049154,"dec":11.14616933},
+{"mag":5.72,"ra":4.75115296,"dec":-21.28334113},
+{"mag":4.01,"ra":4.7583725,"dec":-3.25462465},
+{"mag":5.35,"ra":4.7671391,"dec":11.70560822},
+{"mag":5.99,"ra":4.77132883,"dec":18.73486237},
+{"mag":5.99,"ra":4.77901993,"dec":40.31268034},
+{"mag":5.49,"ra":4.79339229,"dec":-16.93486728},
+{"mag":5.29,"ra":4.80006019,"dec":56.75753919},
+{"mag":5.76,"ra":4.80903573,"dec":-16.32958093},
+{"mag":5.77,"ra":4.81005621,"dec":-5.67343877},
+{"mag":5.96,"ra":4.81396198,"dec":75.94154357},
+{"mag":5.57,"ra":4.82023194,"dec":31.43762493},
+{"mag":5.84,"ra":4.82196093,"dec":32.58826794},
+{"mag":3.19,"ra":4.83059395,"dec":6.96124744},
+{"mag":4.89,"ra":4.83185181,"dec":37.48818131},
+{"mag":5.03,"ra":4.83655253,"dec":-16.21728342},
+{"mag":4.35,"ra":4.84353396,"dec":8.90025258},
+{"mag":5.58,"ra":4.84871841,"dec":-53.46172112},
+{"mag":5.64,"ra":4.85260104,"dec":48.74075831},
+{"mag":3.68,"ra":4.853435,"dec":5.60510146},
+{"mag":5.08,"ra":4.85622592,"dec":18.83994085},
+{"mag":5.82,"ra":4.85783297,"dec":-34.906232},
+{"mag":5.47,"ra":4.86810263,"dec":63.50564999},
+{"mag":4.71,"ra":4.87554547,"dec":14.25077828},
+{"mag":4.79,"ra":4.877222,"dec":36.70319636},
+{"mag":5.97,"ra":4.87974652,"dec":27.89757233},
+{"mag":5.68,"ra":4.87993485,"dec":42.58662591},
+{"mag":4.36,"ra":4.88157788,"dec":-5.45275591},
+{"mag":5.33,"ra":4.88965424,"dec":2.50826491},
+{"mag":4.26,"ra":4.90083628,"dec":66.34266029},
+{"mag":3.71,"ra":4.90419323,"dec":2.44067149},
+{"mag":5.18,"ra":4.9130296,"dec":11.42597336},
+{"mag":5.33,"ra":4.91327608,"dec":7.77916325},
+{"mag":5.98,"ra":4.91408569,"dec":0.46717846},
+{"mag":4.64,"ra":4.91491781,"dec":10.15114511},
+{"mag":5.52,"ra":4.91753938,"dec":55.25912955},
+{"mag":5.71,"ra":4.91856131,"dec":-16.74064825},
+{"mag":5.47,"ra":4.91976102,"dec":-74.93700232},
+{"mag":5.71,"ra":4.92184502,"dec":-16.41785525},
+{"mag":5.79,"ra":4.9305989,"dec":15.04030639},
+{"mag":5.75,"ra":4.93529912,"dec":52.86971717},
+{"mag":4.06,"ra":4.93953363,"dec":13.51457755},
+{"mag":5.5,"ra":4.94005256,"dec":-5.17135066},
+{"mag":2.69,"ra":4.94989339,"dec":33.16613537},
+{"mag":4.43,"ra":4.95478345,"dec":53.75208289},
+{"mag":5.51,"ra":4.95620761,"dec":17.1537068},
+{"mag":5.79,"ra":4.96351265,"dec":23.94858492},
+{"mag":5.79,"ra":4.96927121,"dec":25.05052129},
+{"mag":4.47,"ra":4.97580635,"dec":1.71403506},
+{"mag":5.84,"ra":4.98082977,"dec":-82.47052255},
+{"mag":5.65,"ra":4.98373273,"dec":-16.37633681},
+{"mag":4.93,"ra":4.98760428,"dec":37.8904824},
+{"mag":5.39,"ra":4.99734468,"dec":-10.26299266},
+{"mag":4.78,"ra":4.99880918,"dec":-12.5372045},
+{"mag":5.95,"ra":5.00509646,"dec":39.39470389},
+{"mag":5.09,"ra":5.0057547,"dec":81.19402107},
+{"mag":4.91,"ra":5.02376607,"dec":-20.05188078},
+{"mag":4.8,"ra":5.0239847,"dec":-7.17397802},
+{"mag":5.91,"ra":5.03065283,"dec":0.72216704},
+{"mag":3.03,"ra":5.032815,"dec":43.82331397},
+{"mag":5.01,"ra":5.03604611,"dec":-26.27484321},
+{"mag":5.92,"ra":5.0396692,"dec":-31.77154017},
+{"mag":3.69,"ra":5.04130001,"dec":41.07588953},
+{"mag":5.3,"ra":5.04527913,"dec":-71.31432608},
+{"mag":5.74,"ra":5.04581794,"dec":-22.79508768},
+{"mag":5.86,"ra":5.04593612,"dec":-4.2101255},
+{"mag":5.37,"ra":5.04686816,"dec":-49.15147328},
+{"mag":4.62,"ra":5.05158446,"dec":21.5900617},
+{"mag":4.03,"ra":5.05697146,"dec":60.44228144},
+{"mag":5.61,"ra":5.06479316,"dec":-24.38805735},
+{"mag":4.55,"ra":5.07341993,"dec":-35.48287057},
+{"mag":4.65,"ra":5.07614954,"dec":15.40418059},
+{"mag":5.05,"ra":5.08276459,"dec":-49.57783014},
+{"mag":5.71,"ra":5.0878303,"dec":-26.15223983},
+{"mag":3.19,"ra":5.09101447,"dec":-22.37085673},
+{"mag":4.71,"ra":5.09185843,"dec":-57.47298928},
+{"mag":5.22,"ra":5.10234992,"dec":58.97239085},
+{"mag":3.18,"ra":5.10857473,"dec":41.23464074},
+{"mag":4.98,"ra":5.11129396,"dec":51.59814314},
+{"mag":5.12,"ra":5.11267966,"dec":-4.65516319},
+{"mag":5.97,"ra":5.12357833,"dec":-12.49100914},
+{"mag":4.91,"ra":5.12407668,"dec":18.64500711},
+{"mag":5.19,"ra":5.1261142,"dec":-63.39957018},
+{"mag":5.28,"ra":5.13011904,"dec":20.41845485},
+{"mag":2.78,"ra":5.13084276,"dec":-5.08626282},
+{"mag":5.33,"ra":5.13135365,"dec":8.49857348},
+{"mag":5.84,"ra":5.13206523,"dec":21.70483596},
+{"mag":5.5,"ra":5.13517285,"dec":24.26518765},
+{"mag":5.8,"ra":5.13894108,"dec":-8.66527389},
+{"mag":5.11,"ra":5.14546298,"dec":-4.45624625},
+{"mag":4.25,"ra":5.15243971,"dec":-8.75407607},
+{"mag":5.43,"ra":5.15544563,"dec":9.82959768},
+{"mag":4.81,"ra":5.16165538,"dec":15.59727157},
+{"mag":5.93,"ra":5.16251537,"dec":28.03060835},
+{"mag":5.67,"ra":5.17857524,"dec":46.96243511},
+{"mag":5.89,"ra":5.188647,"dec":-2.49078592},
+{"mag":5.6,"ra":5.1896812,"dec":-11.84922715},
+{"mag":5.18,"ra":5.19487817,"dec":16.04565766},
+{"mag":5.88,"ra":5.19593066,"dec":1.03705465},
+{"mag":4.45,"ra":5.20496871,"dec":-11.86914287},
+{"mag":5.44,"ra":5.20623596,"dec":73.94674435},
+{"mag":5.9,"ra":5.21336561,"dec":-6.05711381},
+{"mag":3.29,"ra":5.2155203,"dec":-16.20542901},
+{"mag":4.36,"ra":5.22052361,"dec":-12.94128833},
+{"mag":4.46,"ra":5.22152211,"dec":2.86125346},
+{"mag":4.82,"ra":5.22381432,"dec":38.48467394},
+{"mag":4.81,"ra":5.22928523,"dec":-67.18534976},
+{"mag":5.75,"ra":5.24134386,"dec":-35.97703069},
+{"mag":0.18,"ra":5.24229756,"dec":-8.20163919},
+{"mag":5.5,"ra":5.24557009,"dec":5.15612934},
+{"mag":5.06,"ra":5.25676816,"dec":-26.94343723},
+{"mag":5.01,"ra":5.25678102,"dec":32.6875699},
+{"mag":5.52,"ra":5.26781645,"dec":11.34136954},
+{"mag":5.99,"ra":5.27170902,"dec":34.31221188},
+{"mag":0.08,"ra":5.27813767,"dec":45.99902927},
+{"mag":4.81,"ra":5.29139537,"dec":-34.89438961},
+{"mag":3.59,"ra":5.29344415,"dec":-6.84438616},
+{"mag":5.48,"ra":5.29451284,"dec":-13.51970778},
+{"mag":4.54,"ra":5.30293003,"dec":33.37200411},
+{"mag":5.81,"ra":5.3036813,"dec":73.26813649},
+{"mag":5.55,"ra":5.3043563,"dec":42.79218517},
+{"mag":5.96,"ra":5.31395441,"dec":-18.13019946},
+{"mag":5.38,"ra":5.31667203,"dec":33.74846576},
+{"mag":4.69,"ra":5.31891066,"dec":40.10066732},
+{"mag":5.34,"ra":5.31978599,"dec":2.59593601},
+{"mag":4.96,"ra":5.32127494,"dec":22.09669104},
+{"mag":5.44,"ra":5.32280938,"dec":-50.60652008},
+{"mag":5.98,"ra":5.32324642,"dec":-27.3688642},
+{"mag":4.29,"ra":5.32625721,"dec":-13.17677698},
+{"mag":5.29,"ra":5.3330641,"dec":-12.31560456},
+{"mag":5.05,"ra":5.33358917,"dec":33.95806265},
+{"mag":5.46,"ra":5.33741214,"dec":41.08633916},
+{"mag":5.64,"ra":5.33961515,"dec":62.65371666},
+{"mag":4.7,"ra":5.34080881,"dec":-21.23973932},
+{"mag":5.66,"ra":5.35352454,"dec":29.56988462},
+{"mag":5.68,"ra":5.35884547,"dec":-0.41649397},
+{"mag":5.78,"ra":5.36210043,"dec":8.42856342},
+{"mag":4.72,"ra":5.36270768,"dec":-0.38246922},
+{"mag":5.06,"ra":5.36285213,"dec":-24.77294996},
+{"mag":5.22,"ra":5.36344588,"dec":41.80466344},
+{"mag":5.08,"ra":5.37604924,"dec":79.23075701},
+{"mag":4.99,"ra":5.38055592,"dec":3.54444809},
+{"mag":5.54,"ra":5.38064569,"dec":41.02925326},
+{"mag":5.99,"ra":5.38847536,"dec":-8.41558811},
+{"mag":5.73,"ra":5.39000126,"dec":-39.67843559},
+{"mag":5.24,"ra":5.39106291,"dec":57.54453138},
+{"mag":5.25,"ra":5.39170995,"dec":-13.92734983},
+{"mag":5.69,"ra":5.39508572,"dec":-0.15981294},
+{"mag":4.13,"ra":5.39912122,"dec":-7.80795569},
+{"mag":5.0,"ra":5.40703064,"dec":17.38355205},
+{"mag":5.64,"ra":5.40790794,"dec":-16.97574213},
+{"mag":3.35,"ra":5.40794918,"dec":-2.39713844},
+{"mag":5.07,"ra":5.40803085,"dec":-0.89166902},
+{"mag":5.94,"ra":5.41070182,"dec":31.14316298},
+{"mag":5.02,"ra":5.4108728,"dec":37.38537514},
+{"mag":4.89,"ra":5.4124518,"dec":1.84644611},
+{"mag":5.6,"ra":5.41715061,"dec":-10.3288454},
+{"mag":1.64,"ra":5.41885227,"dec":6.34973451},
+{"mag":5.78,"ra":5.43328417,"dec":-19.69535296},
+{"mag":1.65,"ra":5.43819386,"dec":28.60787346},
+{"mag":5.14,"ra":5.43868804,"dec":-58.91259871},
+{"mag":5.92,"ra":5.4468898,"dec":34.39182774},
+{"mag":4.59,"ra":5.4472856,"dec":3.09567718},
+{"mag":5.86,"ra":5.45147722,"dec":-40.94377328},
+{"mag":5.69,"ra":5.45229799,"dec":30.20861412},
+{"mag":5.4,"ra":5.45280243,"dec":17.96226766},
+{"mag":4.88,"ra":5.4605789,"dec":21.93698219},
+{"mag":5.08,"ra":5.46080204,"dec":34.47598643},
+{"mag":5.52,"ra":5.46266829,"dec":15.87410386},
+{"mag":5.77,"ra":5.46711126,"dec":17.23924182},
+{"mag":2.81,"ra":5.47075731,"dec":-20.75923214},
+{"mag":5.56,"ra":5.47092413,"dec":-37.2309313},
+{"mag":5.47,"ra":5.48791465,"dec":25.15030596},
+{"mag":5.8,"ra":5.48991712,"dec":-3.44637074},
+{"mag":4.71,"ra":5.49555043,"dec":-1.09217557},
+{"mag":5.77,"ra":5.49854807,"dec":1.78926104},
+{"mag":5.46,"ra":5.50262829,"dec":-47.07733403},
+{"mag":5.43,"ra":5.50283601,"dec":63.06723206},
+{"mag":5.93,"ra":5.50727036,"dec":15.3605429},
+{"mag":4.2,"ra":5.51306886,"dec":5.94821792},
+{"mag":5.99,"ra":5.51351377,"dec":41.462078},
+{"mag":5.53,"ra":5.51878434,"dec":-20.86355455},
+{"mag":3.86,"ra":5.5202043,"dec":-35.47043592},
+{"mag":5.46,"ra":5.52070329,"dec":3.2921351},
+{"mag":5.86,"ra":5.52666346,"dec":-45.92540473},
+{"mag":5.18,"ra":5.53129495,"dec":-76.3416634},
+{"mag":4.62,"ra":5.53218341,"dec":-7.30152625},
+{"mag":2.25,"ra":5.53344437,"dec":-0.2990934},
+{"mag":4.32,"ra":5.53687534,"dec":18.59424525},
+{"mag":5.5,"ra":5.53726239,"dec":17.05815445},
+{"mag":5.34,"ra":5.54482068,"dec":-1.59183293},
+{"mag":4.71,"ra":5.54546505,"dec":32.1920314},
+{"mag":2.58,"ra":5.54550386,"dec":-17.82229227},
+{"mag":5.45,"ra":5.54760468,"dec":-38.51334582},
+{"mag":5.34,"ra":5.54986797,"dec":-64.22751422},
+{"mag":5.75,"ra":5.55203233,"dec":-35.13930773},
+{"mag":5.36,"ra":5.55873525,"dec":-1.15607162},
+{"mag":5.67,"ra":5.55878604,"dec":18.54023092},
+{"mag":3.76,"ra":5.5604212,"dec":-62.48985585},
+{"mag":5.6,"ra":5.56507922,"dec":14.30559209},
+{"mag":5.92,"ra":5.56779322,"dec":-1.47020476},
+{"mag":5.32,"ra":5.57133058,"dec":3.76693355},
+{"mag":5.79,"ra":5.57910622,"dec":-73.74136684},
+{"mag":4.39,"ra":5.58034384,"dec":9.48958528},
+{"mag":5.67,"ra":5.58361285,"dec":-6.00926927},
+{"mag":4.78,"ra":5.5840781,"dec":-6.00202867},
+{"mag":3.39,"ra":5.58563269,"dec":9.93416294},
+{"mag":5.6,"ra":5.58701077,"dec":10.24010204},
+{"mag":5.76,"ra":5.58762632,"dec":-33.08000909},
+{"mag":4.98,"ra":5.58772859,"dec":-5.38731536},
+{"mag":5.13,"ra":5.58790724,"dec":-5.38969624},
+{"mag":4.98,"ra":5.58969439,"dec":-5.41606331},
+{"mag":4.58,"ra":5.58976712,"dec":-4.83834045},
+{"mag":2.75,"ra":5.59055031,"dec":-5.90989984},
+{"mag":5.37,"ra":5.59086681,"dec":24.03963793},
+{"mag":5.24,"ra":5.5943014,"dec":-4.8560862},
+{"mag":1.69,"ra":5.60355904,"dec":-1.20191725},
+{"mag":5.74,"ra":5.60978467,"dec":54.42868426},
+{"mag":5.71,"ra":5.60991487,"dec":-6.06475248},
+{"mag":4.09,"ra":5.61509185,"dec":9.291412},
+{"mag":5.53,"ra":5.61769711,"dec":17.0404091},
+{"mag":5.97,"ra":5.6178754,"dec":11.03504389},
+{"mag":5.65,"ra":5.61910906,"dec":-80.4716745},
+{"mag":5.83,"ra":5.6191217,"dec":26.92452823},
+{"mag":2.97,"ra":5.62741229,"dec":21.14259299},
+{"mag":5.28,"ra":5.62906752,"dec":-28.68979391},
+{"mag":5.87,"ra":5.63364232,"dec":7.54145541},
+{"mag":5.96,"ra":5.64388131,"dec":-6.57395768},
+{"mag":5.4,"ra":5.64391654,"dec":30.49244147},
+{"mag":5.81,"ra":5.64542408,"dec":-40.70735801},
+{"mag":3.77,"ra":5.64576814,"dec":-2.60006791},
+{"mag":4.77,"ra":5.64808105,"dec":-7.21270844},
+{"mag":4.5,"ra":5.65309608,"dec":4.12146667},
+{"mag":5.98,"ra":5.65508694,"dec":29.21523028},
+{"mag":5.99,"ra":5.65865367,"dec":-3.56470944},
+{"mag":2.65,"ra":5.66081665,"dec":-34.07404941},
+{"mag":5.18,"ra":5.66227573,"dec":25.89714891},
+{"mag":5.44,"ra":5.66384763,"dec":-32.62913912},
+{"mag":1.74,"ra":5.67931244,"dec":-1.94257841},
+{"mag":4.95,"ra":5.68075438,"dec":-1.12878569},
+{"mag":5.93,"ra":5.68488567,"dec":0.33768602},
+{"mag":4.84,"ra":5.68825428,"dec":16.53418318},
+{"mag":5.88,"ra":5.70387732,"dec":-22.37373687},
+{"mag":5.29,"ra":5.7042197,"dec":-34.66793677},
+{"mag":5.62,"ra":5.70734675,"dec":65.6977014},
+{"mag":4.9,"ra":5.70796232,"dec":1.47466498},
+{"mag":5.97,"ra":5.71497438,"dec":-6.79631491},
+{"mag":5.73,"ra":5.72268302,"dec":-18.55744324},
+{"mag":3.59,"ra":5.74110416,"dec":-22.44748663},
+{"mag":4.34,"ra":5.74622751,"dec":-65.7355408},
+{"mag":5.46,"ra":5.76501355,"dec":49.82628283},
+{"mag":5.18,"ra":5.76663692,"dec":-32.30637997},
+{"mag":5.31,"ra":5.77426834,"dec":-46.59722012},
+{"mag":5.93,"ra":5.77510262,"dec":56.11571824},
+{"mag":5.95,"ra":5.77637741,"dec":1.16853796},
+{"mag":5.78,"ra":5.78115401,"dec":9.52249963},
+{"mag":3.55,"ra":5.78259715,"dec":-14.82194717},
+{"mag":5.72,"ra":5.78698598,"dec":14.48842452},
+{"mag":3.85,"ra":5.7880787,"dec":-51.06671329},
+{"mag":5.47,"ra":5.79061039,"dec":17.7291527},
+{"mag":5.28,"ra":5.79525134,"dec":13.89963175},
+{"mag":2.07,"ra":5.79594109,"dec":-9.66960186},
+{"mag":5.26,"ra":5.8000644,"dec":6.4542102},
+{"mag":5.97,"ra":5.80969563,"dec":-4.09408727},
+{"mag":4.88,"ra":5.81693318,"dec":24.56755473},
+{"mag":4.51,"ra":5.81957208,"dec":39.18113322},
+{"mag":4.89,"ra":5.82581763,"dec":12.65136584},
+{"mag":5.49,"ra":5.82682079,"dec":-14.48354987},
+{"mag":4.5,"ra":5.83043799,"dec":-56.1664886},
+{"mag":5.87,"ra":5.83153042,"dec":-22.97192372},
+{"mag":5.1,"ra":5.83154263,"dec":-66.9012309},
+{"mag":5.79,"ra":5.83407686,"dec":9.87122224},
+{"mag":5.96,"ra":5.8369612,"dec":4.42349901},
+{"mag":5.46,"ra":5.83799981,"dec":-79.36152292},
+{"mag":5.54,"ra":5.84136209,"dec":14.30569894},
+{"mag":5.97,"ra":5.84167372,"dec":2.02471682},
+{"mag":5.16,"ra":5.84811626,"dec":-52.1086873},
+{"mag":3.12,"ra":5.84932022,"dec":-35.76929225},
+{"mag":5.6,"ra":5.8494755,"dec":27.96783335},
+{"mag":4.72,"ra":5.85066951,"dec":37.30568175},
+{"mag":3.76,"ra":5.85532022,"dec":-20.87751376},
+{"mag":5.36,"ra":5.85610649,"dec":-7.51800251},
+{"mag":3.97,"ra":5.85816462,"dec":39.14847936},
+{"mag":5.95,"ra":5.86881406,"dec":-9.04197853},
+{"mag":5.93,"ra":5.87227279,"dec":-57.15600008},
+{"mag":5.6,"ra":5.87286171,"dec":14.17179382},
+{"mag":5.96,"ra":5.8731692,"dec":19.86785634},
+{"mag":4.76,"ra":5.87401187,"dec":1.8551579},
+{"mag":5.62,"ra":5.87587847,"dec":-37.63099079},
+{"mag":4.88,"ra":5.88524565,"dec":-33.8014395},
+{"mag":4.56,"ra":5.88878987,"dec":27.61228536},
+{"mag":4.65,"ra":5.90163891,"dec":-63.09102096},
+{"mag":4.39,"ra":5.9064122,"dec":20.27641498},
+{"mag":5.62,"ra":5.91210708,"dec":-11.77426082},
+{"mag":5.99,"ra":5.91223289,"dec":0.96861499},
+{"mag":5.29,"ra":5.91391901,"dec":-52.63607272},
+{"mag":4.96,"ra":5.91410718,"dec":55.7069049},
+{"mag":5.55,"ra":5.91458165,"dec":-39.95790952},
+{"mag":5.92,"ra":5.91574626,"dec":19.74962409},
+{"mag":5.2,"ra":5.91606253,"dec":59.88841219},
+{"mag":5.9,"ra":5.91639455,"dec":31.70193276},
+{"mag":0.45,"ra":5.91952477,"dec":7.40703634},
+{"mag":4.97,"ra":5.92496954,"dec":-37.12060931},
+{"mag":5.87,"ra":5.92504319,"dec":-4.61649597},
+{"mag":5.95,"ra":5.93727674,"dec":-22.84005515},
+{"mag":5.52,"ra":5.93915078,"dec":-31.38245487},
+{"mag":3.71,"ra":5.94008841,"dec":-14.16803805},
+{"mag":5.97,"ra":5.94112099,"dec":9.50941963},
+{"mag":5.89,"ra":5.94705207,"dec":11.52119572},
+{"mag":4.36,"ra":5.95894774,"dec":-35.28330688},
+{"mag":4.81,"ra":5.96657158,"dec":25.95391597},
+{"mag":5.89,"ra":5.97345532,"dec":1.83712742},
+{"mag":5.81,"ra":5.97709907,"dec":-44.03458558},
+{"mag":5.21,"ra":5.98043916,"dec":0.55297359},
+{"mag":5.7,"ra":5.981456,"dec":12.80825741},
+{"mag":5.04,"ra":5.9845299,"dec":-9.55813955},
+{"mag":3.96,"ra":5.98577514,"dec":-42.81510761},
+{"mag":5.9,"ra":5.98938437,"dec":49.9245461},
+{"mag":3.72,"ra":5.99209731,"dec":54.28498197},
+{"mag":1.9,"ra":5.99215817,"dec":44.94743492},
+{"mag":2.65,"ra":5.99534393,"dec":37.21276409},
+{"mag":4.3,"ra":5.99891705,"dec":45.93675346},
+{"mag":4.53,"ra":6.00092927,"dec":-3.07407681},
+{"mag":5.65,"ra":6.01366609,"dec":-51.21655276},
+{"mag":5.71,"ra":6.01626631,"dec":47.90197432},
+{"mag":5.54,"ra":6.0211928,"dec":-33.91177131},
+{"mag":5.98,"ra":6.02862575,"dec":48.95946915},
+{"mag":4.92,"ra":6.03067383,"dec":-10.59793918},
+{"mag":4.12,"ra":6.03971954,"dec":9.64736756},
+{"mag":5.03,"ra":6.05432252,"dec":-26.28475048},
+{"mag":5.14,"ra":6.05760007,"dec":19.69061033},
+{"mag":4.64,"ra":6.06532876,"dec":20.13845865},
+{"mag":4.16,"ra":6.06867126,"dec":23.26363207},
+{"mag":5.19,"ra":6.07041764,"dec":-6.7089502},
+{"mag":5.65,"ra":6.07229903,"dec":-32.17272393},
+{"mag":5.93,"ra":6.07782417,"dec":-45.07954967},
+{"mag":5.67,"ra":6.08282986,"dec":5.41997005},
+{"mag":5.63,"ra":6.08287775,"dec":4.15867686},
+{"mag":4.92,"ra":6.08309238,"dec":-16.48442713},
+{"mag":5.9,"ra":6.08428337,"dec":42.9819855},
+{"mag":5.88,"ra":6.09083877,"dec":-10.24265912},
+{"mag":5.8,"ra":6.09088025,"dec":-35.51368651},
+{"mag":5.79,"ra":6.10153657,"dec":-29.75852227},
+{"mag":4.67,"ra":6.10259278,"dec":-14.93528629},
+{"mag":5.72,"ra":6.10260062,"dec":-66.03968885},
+{"mag":5.46,"ra":6.10891755,"dec":-23.11077641},
+{"mag":5.35,"ra":6.10974713,"dec":38.48277233},
+{"mag":5.37,"ra":6.11076119,"dec":-4.1938248},
+{"mag":5.74,"ra":6.11597694,"dec":-21.81229045},
+{"mag":5.04,"ra":6.11760078,"dec":-62.15441128},
+{"mag":5.82,"ra":6.11768569,"dec":-34.31202171},
+{"mag":5.0,"ra":6.12545336,"dec":-37.25292114},
+{"mag":4.42,"ra":6.12620051,"dec":14.76852318},
+{"mag":5.28,"ra":6.1282306,"dec":-19.16600403},
+{"mag":5.5,"ra":6.13135211,"dec":-42.1540013},
+{"mag":5.06,"ra":6.14565114,"dec":-68.84345717},
+{"mag":5.49,"ra":6.14940758,"dec":-22.42728352},
+{"mag":5.7,"ra":6.14941789,"dec":2.49972675},
+{"mag":5.93,"ra":6.15901154,"dec":22.19027415},
+{"mag":5.56,"ra":6.1595927,"dec":-14.58469045},
+{"mag":5.75,"ra":6.16221816,"dec":23.11346966},
+{"mag":5.71,"ra":6.16330733,"dec":-22.77449062},
+{"mag":5.35,"ra":6.1663874,"dec":58.93564864},
+{"mag":5.54,"ra":6.16956109,"dec":-40.35396993},
+{"mag":5.08,"ra":6.17061203,"dec":-74.7525279},
+{"mag":4.72,"ra":6.17164253,"dec":-54.96866057},
+{"mag":5.72,"ra":6.17630178,"dec":-27.15420421},
+{"mag":5.01,"ra":6.18750418,"dec":-65.58970507},
+{"mag":5.83,"ra":6.192307,"dec":24.42037914},
+{"mag":5.78,"ra":6.19349404,"dec":48.71112468},
+{"mag":5.06,"ra":6.19772671,"dec":-6.55028276},
+{"mag":4.45,"ra":6.1989991,"dec":14.20881425},
+{"mag":5.76,"ra":6.20037193,"dec":19.79057155},
+{"mag":4.95,"ra":6.20091003,"dec":16.13044684},
+{"mag":5.78,"ra":6.20559166,"dec":32.69338941},
+{"mag":5.36,"ra":6.21418132,"dec":65.71849922},
+{"mag":5.83,"ra":6.23173457,"dec":-3.74142288},
+{"mag":5.86,"ra":6.24127361,"dec":17.90637842},
+{"mag":5.83,"ra":6.24352962,"dec":-4.56846315},
+{"mag":5.2,"ra":6.24748218,"dec":19.15688949},
+{"mag":3.99,"ra":6.24759346,"dec":-6.27472737},
+{"mag":3.31,"ra":6.2479713,"dec":22.50682376},
+{"mag":5.88,"ra":6.25233364,"dec":-20.27226037},
+{"mag":5.91,"ra":6.25234927,"dec":13.85107261},
+{"mag":5.99,"ra":6.25491968,"dec":-18.47701325},
+{"mag":4.32,"ra":6.25631571,"dec":29.49871224},
+{"mag":5.34,"ra":6.25697971,"dec":16.14320591},
+{"mag":5.99,"ra":6.25823884,"dec":-4.91463574},
+{"mag":5.62,"ra":6.25954368,"dec":-0.51165873},
+{"mag":5.37,"ra":6.26125215,"dec":59.99903422},
+{"mag":5.0,"ra":6.26246633,"dec":-13.71838696},
+{"mag":5.44,"ra":6.26249062,"dec":12.55107067},
+{"mag":5.97,"ra":6.26880456,"dec":-16.61800865},
+{"mag":5.04,"ra":6.27404723,"dec":12.2717103},
+{"mag":4.37,"ra":6.27587093,"dec":-35.14073157},
+{"mag":5.54,"ra":6.283675,"dec":-37.7376495},
+{"mag":5.39,"ra":6.28517131,"dec":9.94253598},
+{"mag":5.88,"ra":6.28599235,"dec":-37.25344284},
+{"mag":5.7,"ra":6.28784682,"dec":5.09969578},
+{"mag":5.15,"ra":6.29492571,"dec":-16.81591325},
+{"mag":5.01,"ra":6.29856443,"dec":61.51529221},
+{"mag":5.51,"ra":6.30381437,"dec":-19.96699189},
+{"mag":5.36,"ra":6.31405011,"dec":-9.38996323},
+{"mag":4.76,"ra":6.3141055,"dec":69.3200343},
+{"mag":5.79,"ra":6.31638259,"dec":-20.92562047},
+{"mag":4.44,"ra":6.32705299,"dec":59.01090518},
+{"mag":5.76,"ra":6.32804258,"dec":-34.39659537},
+{"mag":5.27,"ra":6.32855581,"dec":-7.82291023},
+{"mag":4.91,"ra":6.33322344,"dec":-2.94449028},
+{"mag":5.67,"ra":6.33450772,"dec":14.65116899},
+{"mag":3.02,"ra":6.33855198,"dec":-30.06337656},
+{"mag":5.55,"ra":6.34339979,"dec":-34.14419295},
+{"mag":5.48,"ra":6.35686605,"dec":-11.77324372},
+{"mag":5.34,"ra":6.3628078,"dec":53.45239515},
+{"mag":3.85,"ra":6.36856809,"dec":-33.43627251},
+{"mag":5.56,"ra":6.37728616,"dec":-69.98412773},
+{"mag":1.98,"ra":6.37832983,"dec":-17.95591658},
+{"mag":5.6,"ra":6.38218574,"dec":-56.3699207},
+{"mag":2.87,"ra":6.3826642,"dec":22.51385027},
+{"mag":4.39,"ra":6.39613824,"dec":4.59283881},
+{"mag":5.61,"ra":6.39886496,"dec":-25.57752992},
+{"mag":-0.62,"ra":6.39919184,"dec":-52.69571799},
+{"mag":5.62,"ra":6.40028304,"dec":-36.70789674},
+{"mag":5.21,"ra":6.40287589,"dec":-11.53000982},
+{"mag":5.78,"ra":6.40385537,"dec":-60.28139797},
+{"mag":4.92,"ra":6.41497277,"dec":49.28789903},
+{"mag":5.88,"ra":6.42122414,"dec":-0.94535265},
+{"mag":5.37,"ra":6.42462528,"dec":-69.69078672},
+{"mag":5.76,"ra":6.42879318,"dec":-48.17684903},
+{"mag":5.53,"ra":6.44051768,"dec":56.2850437},
+{"mag":5.87,"ra":6.44433085,"dec":-1.50726444},
+{"mag":5.21,"ra":6.44691089,"dec":58.41741346},
+{"mag":5.82,"ra":6.4511488,"dec":-58.00210529},
+{"mag":5.19,"ra":6.45382213,"dec":0.29926632},
+{"mag":5.55,"ra":6.45433068,"dec":-0.27598684},
+{"mag":5.55,"ra":6.45568784,"dec":2.90825624},
+{"mag":5.06,"ra":6.46599222,"dec":-4.76214677},
+{"mag":4.47,"ra":6.46950484,"dec":-32.58012947},
+{"mag":5.75,"ra":6.47613575,"dec":30.49306993},
+{"mag":5.76,"ra":6.47705815,"dec":-17.46603282},
+{"mag":5.74,"ra":6.47756791,"dec":-32.37129738},
+{"mag":3.76,"ra":6.48029836,"dec":-7.03305042},
+{"mag":4.13,"ra":6.48271957,"dec":20.2121672},
+{"mag":5.2,"ra":6.49126103,"dec":-56.85284448},
+{"mag":5.28,"ra":6.49697967,"dec":-50.23895882},
+{"mag":5.88,"ra":6.5008278,"dec":46.68553561},
+{"mag":5.92,"ra":6.50313343,"dec":-10.08150589},
+{"mag":5.92,"ra":6.51285923,"dec":-27.7695891},
+{"mag":5.86,"ra":6.51309481,"dec":58.16345682},
+{"mag":5.82,"ra":6.5203048,"dec":-35.25886111},
+{"mag":5.58,"ra":6.52172758,"dec":-51.82620719},
+{"mag":5.16,"ra":6.52306102,"dec":-12.39190922},
+{"mag":5.22,"ra":6.53008012,"dec":11.5443434},
+{"mag":5.43,"ra":6.53057429,"dec":-8.15818115},
+{"mag":4.34,"ra":6.53093562,"dec":-23.41843727},
+{"mag":5.69,"ra":6.53286434,"dec":-58.75384073},
+{"mag":5.88,"ra":6.53867391,"dec":4.85599529},
+{"mag":5.25,"ra":6.53925919,"dec":-37.69651376},
+{"mag":5.6,"ra":6.53975824,"dec":-5.86871833},
+{"mag":5.82,"ra":6.54088967,"dec":32.45494059},
+{"mag":5.73,"ra":6.54416067,"dec":-32.03045378},
+{"mag":4.47,"ra":6.5483971,"dec":7.33297921},
+{"mag":5.57,"ra":6.56004803,"dec":14.15537477},
+{"mag":5.09,"ra":6.56053354,"dec":-1.22011054},
+{"mag":5.42,"ra":6.56374759,"dec":-36.23226731},
+{"mag":5.62,"ra":6.57648027,"dec":-32.71626113},
+{"mag":4.35,"ra":6.58294093,"dec":-52.97563454},
+{"mag":4.54,"ra":6.5842722,"dec":-22.96483318},
+{"mag":5.26,"ra":6.58668383,"dec":28.02234399},
+{"mag":5.78,"ra":6.5877304,"dec":0.89022204},
+{"mag":5.93,"ra":6.58822124,"dec":9.98835403},
+{"mag":5.59,"ra":6.59006229,"dec":-36.77993005},
+{"mag":5.71,"ra":6.60634935,"dec":-18.65994454},
+{"mag":5.4,"ra":6.60912158,"dec":38.4455521},
+{"mag":5.52,"ra":6.60981395,"dec":-5.21110831},
+{"mag":3.95,"ra":6.61138858,"dec":-19.25570928},
+{"mag":5.95,"ra":6.61294455,"dec":-13.32097688},
+{"mag":5.72,"ra":6.62051162,"dec":-36.99068388},
+{"mag":5.87,"ra":6.62733303,"dec":56.85750718},
+{"mag":5.94,"ra":6.62823339,"dec":61.48190031},
+{"mag":1.93,"ra":6.62852842,"dec":16.39941482},
+{"mag":3.17,"ra":6.62935324,"dec":-43.19592394},
+{"mag":5.25,"ra":6.62987325,"dec":-32.33989066},
+{"mag":4.42,"ra":6.6315072,"dec":-18.23745713},
+{"mag":5.76,"ra":6.63972756,"dec":28.98439129},
+{"mag":5.05,"ra":6.6437868,"dec":-48.22023129},
+{"mag":5.7,"ra":6.64432061,"dec":39.3911153},
+{"mag":5.34,"ra":6.64699627,"dec":39.90258791},
+{"mag":4.82,"ra":6.65464344,"dec":-14.14574673},
+{"mag":4.8,"ra":6.6555075,"dec":42.48901214},
+{"mag":5.7,"ra":6.66185157,"dec":-30.47002424},
+{"mag":5.99,"ra":6.66325704,"dec":12.98280259},
+{"mag":5.61,"ra":6.66747463,"dec":-80.81372235},
+{"mag":5.75,"ra":6.67467701,"dec":77.9957971},
+{"mag":5.88,"ra":6.6756233,"dec":71.74875988},
+{"mag":4.66,"ra":6.6829614,"dec":9.89576021},
+{"mag":5.79,"ra":6.68484585,"dec":0.4953354},
+{"mag":5.21,"ra":6.69899062,"dec":-9.16742468},
+{"mag":5.2,"ra":6.70675626,"dec":17.64551421},
+{"mag":5.04,"ra":6.71805786,"dec":44.52452351},
+{"mag":5.88,"ra":6.72740163,"dec":3.93253483},
+{"mag":3.06,"ra":6.73220272,"dec":25.13115531},
+{"mag":4.49,"ra":6.73313723,"dec":13.22814319},
+{"mag":5.23,"ra":6.74124138,"dec":-31.07053787},
+{"mag":5.42,"ra":6.74596242,"dec":28.97098912},
+{"mag":-1.44,"ra":6.7525694,"dec":-16.71314306},
+{"mag":3.35,"ra":6.75484265,"dec":12.89605513},
+{"mag":5.92,"ra":6.75641119,"dec":-31.79292174},
+{"mag":5.62,"ra":6.7586641,"dec":-30.94899076},
+{"mag":5.81,"ra":6.76492257,"dec":-52.40971351},
+{"mag":5.3,"ra":6.76650033,"dec":-14.79608441},
+{"mag":4.86,"ra":6.77059796,"dec":59.44169108},
+{"mag":5.44,"ra":6.77068598,"dec":79.56627808},
+{"mag":5.92,"ra":6.77567188,"dec":8.5871691},
+{"mag":5.66,"ra":6.7775064,"dec":-10.10736196},
+{"mag":5.24,"ra":6.77898306,"dec":43.57702483},
+{"mag":5.34,"ra":6.78041513,"dec":57.1692705},
+{"mag":5.28,"ra":6.78085938,"dec":-14.42599569},
+{"mag":5.39,"ra":6.78130382,"dec":-51.2654494},
+{"mag":5.6,"ra":6.78853053,"dec":-55.54004918},
+{"mag":4.77,"ra":6.78884564,"dec":8.03728277},
+{"mag":5.27,"ra":6.78927966,"dec":-37.92967246},
+{"mag":5.08,"ra":6.79367322,"dec":-8.99850109},
+{"mag":5.22,"ra":6.79432798,"dec":48.78946087},
+{"mag":4.48,"ra":6.79768245,"dec":2.41218914},
+{"mag":3.24,"ra":6.80320475,"dec":-61.94197988},
+{"mag":5.54,"ra":6.80339787,"dec":55.70444959},
+{"mag":5.75,"ra":6.8053022,"dec":-1.31883901},
+{"mag":5.39,"ra":6.81603841,"dec":-15.14471091},
+{"mag":5.75,"ra":6.82122615,"dec":-2.27202783},
+{"mag":5.72,"ra":6.82814957,"dec":32.60687904},
+{"mag":5.87,"ra":6.8305126,"dec":16.20291318},
+{"mag":3.5,"ra":6.83068485,"dec":-32.50848752},
+{"mag":4.41,"ra":6.83092114,"dec":-53.62249221},
+{"mag":5.14,"ra":6.83183806,"dec":-46.61547007},
+{"mag":2.94,"ra":6.83226023,"dec":-50.61439973},
+{"mag":5.77,"ra":6.83938142,"dec":-17.08455798},
+{"mag":5.74,"ra":6.8398194,"dec":-31.70609416},
+{"mag":5.68,"ra":6.84041661,"dec":13.41319516},
+{"mag":4.99,"ra":6.84610087,"dec":41.78156548},
+{"mag":5.78,"ra":6.84717193,"dec":-0.54042726},
+{"mag":4.99,"ra":6.8478748,"dec":-34.36732059},
+{"mag":5.14,"ra":6.84919114,"dec":67.57192306},
+{"mag":5.41,"ra":6.85749419,"dec":-70.96347336},
+{"mag":5.28,"ra":6.85918048,"dec":21.76123162},
+{"mag":5.94,"ra":6.86179161,"dec":-36.230126},
+{"mag":5.68,"ra":6.86666992,"dec":23.60174256},
+{"mag":3.6,"ra":6.87981668,"dec":33.96136985},
+{"mag":5.75,"ra":6.88041315,"dec":8.38044841},
+{"mag":5.34,"ra":6.88473935,"dec":59.44865494},
+{"mag":5.65,"ra":6.88856748,"dec":-19.03277877},
+{"mag":4.82,"ra":6.89247515,"dec":-20.22426366},
+{"mag":5.11,"ra":6.89506697,"dec":68.88829173},
+{"mag":3.89,"ra":6.90220967,"dec":-24.18422296},
+{"mag":4.08,"ra":6.90318908,"dec":-12.03859273},
+{"mag":5.44,"ra":6.90684916,"dec":-1.1269609},
+{"mag":4.73,"ra":6.91072051,"dec":13.17801628},
+{"mag":5.8,"ra":6.91742728,"dec":-20.40485094},
+{"mag":5.74,"ra":6.92185853,"dec":25.37563643},
+{"mag":4.66,"ra":6.92705526,"dec":-20.13659348},
+{"mag":5.29,"ra":6.92970275,"dec":-22.9414495},
+{"mag":5.0,"ra":6.93517966,"dec":-14.04344644},
+{"mag":4.36,"ra":6.93561842,"dec":-17.05424675},
+{"mag":4.94,"ra":6.93777476,"dec":-48.72116448},
+{"mag":5.9,"ra":6.94051187,"dec":9.95659959},
+{"mag":5.85,"ra":6.94223899,"dec":46.27398621},
+{"mag":5.45,"ra":6.9429112,"dec":-79.42018913},
+{"mag":5.88,"ra":6.94892476,"dec":46.70553754},
+{"mag":5.91,"ra":6.95014906,"dec":33.68103629},
+{"mag":4.35,"ra":6.9546107,"dec":58.42305973},
+{"mag":5.45,"ra":6.95943584,"dec":-24.63105594},
+{"mag":4.9,"ra":6.96031249,"dec":45.09410202},
+{"mag":5.07,"ra":6.97364048,"dec":-34.11172588},
+{"mag":5.59,"ra":6.97663983,"dec":-25.41416976},
+{"mag":1.5,"ra":6.9770963,"dec":-28.97208931},
+{"mag":5.96,"ra":6.98250745,"dec":3.60236429},
+{"mag":5.18,"ra":6.99738276,"dec":-67.91701197},
+{"mag":4.55,"ra":7.00106888,"dec":76.97744152},
+{"mag":5.73,"ra":7.00439567,"dec":16.07900547},
+{"mag":5.95,"ra":7.00660018,"dec":-8.40682482},
+{"mag":5.14,"ra":7.01430699,"dec":-51.4026336},
+{"mag":5.64,"ra":7.01831923,"dec":-25.21564581},
+{"mag":5.69,"ra":7.02260994,"dec":70.80833421},
+{"mag":3.49,"ra":7.02865325,"dec":-27.93484165},
+{"mag":5.22,"ra":7.03233138,"dec":-5.72208135},
+{"mag":5.78,"ra":7.03819177,"dec":15.33606893},
+{"mag":5.2,"ra":7.04021795,"dec":24.21544652},
+{"mag":5.96,"ra":7.04042268,"dec":17.7554551},
+{"mag":5.86,"ra":7.04258178,"dec":16.674465},
+{"mag":4.99,"ra":7.04854986,"dec":-4.23923814},
+{"mag":3.02,"ra":7.05040932,"dec":-23.83330131},
+{"mag":5.5,"ra":7.05419704,"dec":-59.17813539},
+{"mag":5.96,"ra":7.05498037,"dec":9.13834729},
+{"mag":5.93,"ra":7.05843178,"dec":29.33909345},
+{"mag":5.14,"ra":7.06057587,"dec":10.95184577},
+{"mag":4.11,"ra":7.06263699,"dec":-15.63325876},
+{"mag":4.92,"ra":7.06490443,"dec":-49.58425759},
+{"mag":5.56,"ra":7.06594454,"dec":-43.60898397},
+{"mag":5.2,"ra":7.06744664,"dec":-42.33745341},
+{"mag":5.63,"ra":7.06812503,"dec":-5.323971},
+{"mag":4.01,"ra":7.06848205,"dec":20.57029939},
+{"mag":5.14,"ra":7.07175527,"dec":-56.7497313},
+{"mag":5.78,"ra":7.09416694,"dec":9.18583678},
+{"mag":5.55,"ra":7.10323065,"dec":34.47408682},
+{"mag":5.41,"ra":7.11132463,"dec":-11.29401875},
+{"mag":5.8,"ra":7.11863497,"dec":-40.8932956},
+{"mag":5.96,"ra":7.12036138,"dec":-51.9683879},
+{"mag":5.94,"ra":7.12289203,"dec":34.00936165},
+{"mag":5.75,"ra":7.12294141,"dec":-23.84073435},
+{"mag":5.74,"ra":7.13041248,"dec":7.47129491},
+{"mag":5.47,"ra":7.13945621,"dec":15.93092642},
+{"mag":1.83,"ra":7.13985723,"dec":-26.39320776},
+{"mag":5.68,"ra":7.14509485,"dec":-70.49734046},
+{"mag":3.78,"ra":7.14578458,"dec":-70.49919435},
+{"mag":4.83,"ra":7.14752121,"dec":-39.65567374},
+{"mag":5.69,"ra":7.16195205,"dec":-25.23104384},
+{"mag":4.91,"ra":7.17046719,"dec":-4.23763568},
+{"mag":5.46,"ra":7.17203518,"dec":-27.4915246},
+{"mag":5.12,"ra":7.17986076,"dec":-48.93257706},
+{"mag":4.41,"ra":7.18566433,"dec":30.24528065},
+{"mag":5.75,"ra":7.18974445,"dec":26.85666896},
+{"mag":5.44,"ra":7.18989767,"dec":-0.30190562},
+{"mag":4.91,"ra":7.19424789,"dec":39.32054373},
+{"mag":5.84,"ra":7.1948919,"dec":-20.88311563},
+{"mag":4.15,"ra":7.19773899,"dec":-0.49278056},
+{"mag":5.91,"ra":7.20339396,"dec":-25.94260947},
+{"mag":5.3,"ra":7.20439475,"dec":-40.49877843},
+{"mag":5.94,"ra":7.20717502,"dec":-36.54439953},
+{"mag":5.85,"ra":7.20732997,"dec":24.12870291},
+{"mag":4.49,"ra":7.20937248,"dec":-46.75956448},
+{"mag":5.77,"ra":7.21866539,"dec":-11.2513606},
+{"mag":4.87,"ra":7.22038085,"dec":-45.18252474},
+{"mag":5.07,"ra":7.22285194,"dec":16.15906775},
+{"mag":5.46,"ra":7.22316482,"dec":51.42871249},
+{"mag":5.99,"ra":7.22333599,"dec":-22.67414589},
+{"mag":4.42,"ra":7.22561969,"dec":-44.64052957},
+{"mag":5.8,"ra":7.236353,"dec":-3.90175914},
+{"mag":4.42,"ra":7.23756011,"dec":-26.35251617},
+{"mag":5.9,"ra":7.23764516,"dec":-9.94753938},
+{"mag":5.36,"ra":7.23890712,"dec":3.11142128},
+{"mag":5.71,"ra":7.24240287,"dec":12.11586588},
+{"mag":4.75,"ra":7.24392901,"dec":-48.27192832},
+{"mag":5.84,"ra":7.24498461,"dec":24.88520186},
+{"mag":5.72,"ra":7.24611825,"dec":-46.84967225},
+{"mag":4.01,"ra":7.24685045,"dec":-26.77268601},
+{"mag":5.58,"ra":7.24755227,"dec":-27.03792355},
+{"mag":5.95,"ra":7.24920843,"dec":-41.42641755},
+{"mag":5.36,"ra":7.25585562,"dec":-30.68647453},
+{"mag":5.96,"ra":7.25590767,"dec":-52.49951781},
+{"mag":5.78,"ra":7.26094893,"dec":7.97773709},
+{"mag":5.95,"ra":7.26200664,"dec":-10.58360286},
+{"mag":5.54,"ra":7.26392034,"dec":47.24041621},
+{"mag":5.2,"ra":7.26528329,"dec":59.63809569},
+{"mag":5.75,"ra":7.26588205,"dec":27.89742666},
+{"mag":5.46,"ra":7.27071676,"dec":-15.58565483},
+{"mag":5.64,"ra":7.27096444,"dec":-46.77461104},
+{"mag":5.81,"ra":7.2755158,"dec":-38.31894033},
+{"mag":4.66,"ra":7.27638928,"dec":-27.88127313},
+{"mag":4.83,"ra":7.27689913,"dec":-23.31560155},
+{"mag":5.03,"ra":7.28039325,"dec":-36.59264813},
+{"mag":3.97,"ra":7.28050856,"dec":-67.95717248},
+{"mag":2.71,"ra":7.28571226,"dec":-37.09748689},
+{"mag":5.93,"ra":7.29270007,"dec":52.13111463},
+{"mag":5.87,"ra":7.30061804,"dec":40.88336298},
+{"mag":5.86,"ra":7.30118251,"dec":-43.98677255},
+{"mag":3.58,"ra":7.30155744,"dec":16.54047526},
+{"mag":4.65,"ra":7.30511135,"dec":-36.7339666},
+{"mag":5.0,"ra":7.30888306,"dec":49.46474619},
+{"mag":5.24,"ra":7.30931107,"dec":-39.21030701},
+{"mag":5.11,"ra":7.31060908,"dec":-36.74274935},
+{"mag":4.88,"ra":7.31121689,"dec":-24.55870761},
+{"mag":4.37,"ra":7.31180218,"dec":-24.95438447},
+{"mag":5.29,"ra":7.31424419,"dec":-26.58587077},
+{"mag":5.9,"ra":7.32288114,"dec":2.74071985},
+{"mag":5.7,"ra":7.32446705,"dec":-16.39491266},
+{"mag":5.91,"ra":7.32989154,"dec":7.14309133},
+{"mag":3.5,"ra":7.33538592,"dec":21.98233941},
+{"mag":5.5,"ra":7.33929377,"dec":-52.3118825},
+{"mag":5.38,"ra":7.34411524,"dec":-52.08592527},
+{"mag":5.59,"ra":7.34952552,"dec":-14.36048847},
+{"mag":5.87,"ra":7.35120567,"dec":-25.89167605},
+{"mag":5.74,"ra":7.35487205,"dec":45.22817039},
+{"mag":5.09,"ra":7.36580538,"dec":20.44371648},
+{"mag":5.12,"ra":7.36741345,"dec":36.76063782},
+{"mag":5.99,"ra":7.36763264,"dec":0.17712559},
+{"mag":4.94,"ra":7.37042501,"dec":-19.01658444},
+{"mag":5.83,"ra":7.37372137,"dec":-5.98280807},
+{"mag":5.8,"ra":7.38112846,"dec":55.28146955},
+{"mag":5.4,"ra":7.3835286,"dec":-31.92379021},
+{"mag":5.04,"ra":7.39126503,"dec":25.05060041},
+{"mag":5.37,"ra":7.39138192,"dec":-27.83428348},
+{"mag":5.41,"ra":7.39219465,"dec":-32.20207858},
+{"mag":2.45,"ra":7.40158473,"dec":-29.30311979},
+{"mag":5.23,"ra":7.402353,"dec":40.67244066},
+{"mag":5.77,"ra":7.40929001,"dec":27.63781901},
+{"mag":5.18,"ra":7.41116399,"dec":-16.20142374},
+{"mag":5.35,"ra":7.41218561,"dec":-31.80892621},
+{"mag":5.8,"ra":7.41585522,"dec":51.88734396},
+{"mag":5.37,"ra":7.41616364,"dec":11.66955984},
+{"mag":5.79,"ra":7.41901036,"dec":-13.75197556},
+{"mag":5.79,"ra":7.42368706,"dec":-25.2177645},
+{"mag":5.54,"ra":7.42727457,"dec":-79.09420265},
+{"mag":4.99,"ra":7.42747186,"dec":9.27611835},
+{"mag":3.78,"ra":7.42879891,"dec":27.79828561},
+{"mag":5.98,"ra":7.43088993,"dec":-5.77495377},
+{"mag":5.09,"ra":7.43940435,"dec":-51.01849597},
+{"mag":5.9,"ra":7.44513096,"dec":-34.14070792},
+{"mag":4.61,"ra":7.44523915,"dec":49.21164489},
+{"mag":5.94,"ra":7.44898028,"dec":20.25758199},
+{"mag":5.65,"ra":7.44985753,"dec":-23.08603328},
+{"mag":5.6,"ra":7.45221988,"dec":-17.86486511},
+{"mag":2.89,"ra":7.45252008,"dec":8.28940893},
+{"mag":5.98,"ra":7.46192737,"dec":-22.85919757},
+{"mag":5.2,"ra":7.46233179,"dec":21.44554856},
+{"mag":5.79,"ra":7.46435072,"dec":-11.55686168},
+{"mag":5.55,"ra":7.46643538,"dec":-29.1559018},
+{"mag":5.22,"ra":7.46724352,"dec":6.94207694},
+{"mag":4.33,"ra":7.46939707,"dec":8.92550376},
+{"mag":5.95,"ra":7.48087767,"dec":-31.84841156},
+{"mag":5.7,"ra":7.48096806,"dec":48.18403758},
+{"mag":5.78,"ra":7.48470035,"dec":-31.45622952},
+{"mag":5.41,"ra":7.48491972,"dec":-38.8121049},
+{"mag":4.16,"ra":7.48516936,"dec":31.78407932},
+{"mag":3.25,"ra":7.48718842,"dec":-43.30189129},
+{"mag":5.6,"ra":7.48852093,"dec":-1.90530704},
+{"mag":5.07,"ra":7.48901759,"dec":28.1184038},
+{"mag":5.75,"ra":7.48947522,"dec":-10.326657},
+{"mag":5.86,"ra":7.49044722,"dec":-7.55147431},
+{"mag":4.55,"ra":7.49660613,"dec":12.00661101},
+{"mag":5.01,"ra":7.49688365,"dec":27.91619925},
+{"mag":4.85,"ra":7.49761504,"dec":-23.02429924},
+{"mag":5.35,"ra":7.49884905,"dec":49.67266207},
+{"mag":5.87,"ra":7.49992915,"dec":-52.65128759},
+{"mag":5.95,"ra":7.50858507,"dec":-54.39943169},
+{"mag":4.65,"ra":7.51183613,"dec":-30.96228313},
+{"mag":5.63,"ra":7.5146387,"dec":68.465727},
+{"mag":4.92,"ra":7.51791117,"dec":82.41156871},
+{"mag":5.45,"ra":7.53010303,"dec":17.08622915},
+{"mag":5.9,"ra":7.53494921,"dec":-8.88091851},
+{"mag":5.24,"ra":7.53498615,"dec":1.91448227},
+{"mag":5.84,"ra":7.552716,"dec":-24.71078019},
+{"mag":5.59,"ra":7.5532431,"dec":3.29027472},
+{"mag":5.64,"ra":7.55543049,"dec":-19.41235409},
+{"mag":5.27,"ra":7.5601386,"dec":15.82669239},
+{"mag":4.82,"ra":7.5633244,"dec":-14.52390109},
+{"mag":5.42,"ra":7.56418041,"dec":-36.33840157},
+{"mag":4.44,"ra":7.5675572,"dec":-22.29618077},
+{"mag":5.83,"ra":7.57108168,"dec":3.37173632},
+{"mag":5.06,"ra":7.57185383,"dec":-23.47366319},
+{"mag":5.78,"ra":7.57634042,"dec":-27.01244868},
+{"mag":1.58,"ra":7.57666793,"dec":31.88863645},
+{"mag":5.34,"ra":7.58578252,"dec":30.9609101},
+{"mag":4.65,"ra":7.58970478,"dec":-28.36927798},
+{"mag":4.93,"ra":7.59436116,"dec":-52.53380809},
+{"mag":4.06,"ra":7.59871452,"dec":26.89600343},
+{"mag":5.66,"ra":7.60108265,"dec":-14.49277322},
+{"mag":5.66,"ra":7.60879396,"dec":46.18036783},
+{"mag":5.89,"ra":7.60965836,"dec":5.86210427},
+{"mag":5.69,"ra":7.61139965,"dec":-19.70235325},
+{"mag":5.69,"ra":7.61220159,"dec":-48.8301697},
+{"mag":5.93,"ra":7.61306854,"dec":55.75515475},
+{"mag":5.14,"ra":7.62131404,"dec":-4.1110225},
+{"mag":4.53,"ra":7.6228111,"dec":-34.96857044},
+{"mag":5.93,"ra":7.63163296,"dec":48.7739115},
+{"mag":4.69,"ra":7.63834649,"dec":-25.36478805},
+{"mag":5.68,"ra":7.63839214,"dec":-48.60144811},
+{"mag":5.58,"ra":7.64245443,"dec":35.04848403},
+{"mag":5.78,"ra":7.64552896,"dec":-36.49684165},
+{"mag":3.8,"ra":7.64718924,"dec":-26.8038924},
+{"mag":4.89,"ra":7.65276566,"dec":34.58463287},
+{"mag":0.4,"ra":7.65514946,"dec":5.22750767},
+{"mag":4.84,"ra":7.65759832,"dec":-38.3080602},
+{"mag":5.04,"ra":7.65794198,"dec":17.67451551},
+{"mag":5.73,"ra":7.66217485,"dec":-38.1393281},
+{"mag":5.76,"ra":7.6633007,"dec":-38.26067563},
+{"mag":5.99,"ra":7.66610882,"dec":-37.57941274},
+{"mag":5.92,"ra":7.67042535,"dec":-19.66089028},
+{"mag":5.77,"ra":7.6707562,"dec":38.34456671},
+{"mag":4.98,"ra":7.67311445,"dec":-15.26385208},
+{"mag":5.05,"ra":7.67530319,"dec":87.02015634},
+{"mag":5.93,"ra":7.68292301,"dec":23.01855829},
+{"mag":5.58,"ra":7.68679041,"dec":48.13185153},
+{"mag":3.94,"ra":7.68746574,"dec":-9.55108315},
+{"mag":5.41,"ra":7.68773003,"dec":-38.53357185},
+{"mag":5.95,"ra":7.69309907,"dec":3.6248275},
+{"mag":3.93,"ra":7.69699889,"dec":-72.60613528},
+{"mag":5.79,"ra":7.6977412,"dec":13.48051383},
+{"mag":5.55,"ra":7.7008942,"dec":14.20852972},
+{"mag":5.64,"ra":7.71337621,"dec":-26.35125398},
+{"mag":5.04,"ra":7.71587806,"dec":-45.17177284},
+{"mag":4.93,"ra":7.7167938,"dec":58.71048707},
+{"mag":5.6,"ra":7.71999948,"dec":-36.050124},
+{"mag":4.23,"ra":7.72185703,"dec":28.8840717},
+{"mag":4.63,"ra":7.72566545,"dec":-28.41095714},
+{"mag":5.12,"ra":7.72828548,"dec":-40.93332961},
+{"mag":3.94,"ra":7.73013114,"dec":-28.9548352},
+{"mag":5.31,"ra":7.73449659,"dec":50.43386115},
+{"mag":5.3,"ra":7.7352565,"dec":25.78421056},
+{"mag":5.8,"ra":7.73603982,"dec":-36.06271326},
+{"mag":3.57,"ra":7.74079682,"dec":24.39812929},
+{"mag":5.62,"ra":7.74282574,"dec":-24.67409186},
+{"mag":5.89,"ra":7.74283313,"dec":-37.94295545},
+{"mag":3.62,"ra":7.75425108,"dec":-37.96859848},
+{"mag":1.16,"ra":7.75537884,"dec":28.02631031},
+{"mag":5.36,"ra":7.75977164,"dec":-34.17655092},
+{"mag":5.03,"ra":7.76579909,"dec":-14.56382026},
+{"mag":5.49,"ra":7.76726707,"dec":-6.77228458},
+{"mag":4.89,"ra":7.76874825,"dec":18.51016877},
+{"mag":5.87,"ra":7.76959964,"dec":-37.93370008},
+{"mag":5.25,"ra":7.77117196,"dec":10.76831128},
+{"mag":5.15,"ra":7.77757202,"dec":37.51736326},
+{"mag":5.93,"ra":7.77778864,"dec":65.45563092},
+{"mag":5.9,"ra":7.78682179,"dec":-22.51953536},
+{"mag":5.07,"ra":7.79027771,"dec":-38.51115599},
+{"mag":5.14,"ra":7.79176019,"dec":33.41576665},
+{"mag":5.22,"ra":7.79208606,"dec":-46.60850937},
+{"mag":5.48,"ra":7.79910614,"dec":-12.19289276},
+{"mag":4.4,"ra":7.80143747,"dec":-25.93718054},
+{"mag":4.69,"ra":7.80562435,"dec":-47.07753199},
+{"mag":5.32,"ra":7.81713793,"dec":-24.91224336},
+{"mag":5.57,"ra":7.81853397,"dec":-56.41038485},
+{"mag":5.82,"ra":7.82024067,"dec":-46.85774089},
+{"mag":5.78,"ra":7.82026279,"dec":-60.28402896},
+{"mag":4.1,"ra":7.82063861,"dec":-46.37322729},
+{"mag":5.94,"ra":7.82073704,"dec":-35.24330796},
+{"mag":3.34,"ra":7.82157187,"dec":-24.85978401},
+{"mag":5.61,"ra":7.82650792,"dec":-33.28895425},
+{"mag":5.78,"ra":7.82805443,"dec":-66.19597303},
+{"mag":5.17,"ra":7.82810226,"dec":-17.228123},
+{"mag":5.6,"ra":7.83627125,"dec":-9.1834416},
+{"mag":5.89,"ra":7.83996795,"dec":-50.5093647},
+{"mag":5.12,"ra":7.86166577,"dec":1.76687765},
+{"mag":5.62,"ra":7.8619594,"dec":-21.17374245},
+{"mag":5.16,"ra":7.86287326,"dec":-13.89719057},
+{"mag":3.71,"ra":7.87029041,"dec":-40.57579889},
+{"mag":5.01,"ra":7.87105642,"dec":-34.70602121},
+{"mag":5.69,"ra":7.87191203,"dec":-14.84617833},
+{"mag":5.7,"ra":7.87492958,"dec":-54.36718432},
+{"mag":4.49,"ra":7.87740369,"dec":-38.86282206},
+{"mag":5.76,"ra":7.87996418,"dec":-5.42818693},
+{"mag":5.44,"ra":7.88430953,"dec":-36.36377387},
+{"mag":4.63,"ra":7.8843451,"dec":-49.61307949},
+{"mag":4.22,"ra":7.88837857,"dec":-48.10294824},
+{"mag":4.97,"ra":7.89162124,"dec":26.76585858},
+{"mag":5.48,"ra":7.90305869,"dec":-35.87729557},
+{"mag":5.47,"ra":7.91187184,"dec":47.56459225},
+{"mag":5.62,"ra":7.91483127,"dec":-57.30288338},
+{"mag":5.86,"ra":7.92539934,"dec":8.8630571},
+{"mag":5.38,"ra":7.92775116,"dec":19.88406657},
+{"mag":5.74,"ra":7.93851505,"dec":-60.52646168},
+{"mag":3.46,"ra":7.94631715,"dec":-52.98240062},
+{"mag":4.2,"ra":7.94765507,"dec":-22.88014849},
+{"mag":5.36,"ra":7.94939145,"dec":-43.50042396},
+{"mag":5.8,"ra":7.94985247,"dec":15.79038246},
+{"mag":5.08,"ra":7.95511959,"dec":-44.10987569},
+{"mag":4.76,"ra":7.96114215,"dec":-30.33458703},
+{"mag":5.59,"ra":7.96286238,"dec":-60.30336068},
+{"mag":5.14,"ra":7.96437042,"dec":-45.57774475},
+{"mag":4.47,"ra":7.97067886,"dec":-49.24492865},
+{"mag":5.3,"ra":7.9724299,"dec":2.22452544},
+{"mag":5.77,"ra":7.98071025,"dec":-60.82448838},
+{"mag":5.98,"ra":7.98383653,"dec":-45.21586305},
+{"mag":5.09,"ra":7.9849229,"dec":-23.31040264},
+{"mag":5.22,"ra":7.99122921,"dec":-39.29683773},
+{"mag":5.19,"ra":7.99376285,"dec":-60.58708857},
+{"mag":4.93,"ra":7.99560686,"dec":-3.67957835},
+{"mag":4.61,"ra":7.99779309,"dec":-18.39914242},
+{"mag":5.37,"ra":8.00326559,"dec":73.9180101},
+{"mag":4.81,"ra":8.005547,"dec":-63.56750271},
+{"mag":5.6,"ra":8.01314269,"dec":17.30870968},
+{"mag":5.87,"ra":8.01387883,"dec":-54.15129599},
+{"mag":5.87,"ra":8.01551728,"dec":25.39282019},
+{"mag":4.69,"ra":8.0203601,"dec":-1.39242418},
+{"mag":5.65,"ra":8.02053037,"dec":4.87977849},
+{"mag":5.78,"ra":8.02242985,"dec":59.04731836},
+{"mag":5.99,"ra":8.02507938,"dec":16.45532309},
+{"mag":5.9,"ra":8.02709107,"dec":-37.28373201},
+{"mag":4.39,"ra":8.0377648,"dec":2.33431429},
+{"mag":5.52,"ra":8.04577469,"dec":-41.30986539},
+{"mag":5.83,"ra":8.05115829,"dec":-32.46357097},
+{"mag":4.94,"ra":8.05863865,"dec":27.79441794},
+{"mag":2.21,"ra":8.0597417,"dec":-40.00318846},
+{"mag":5.25,"ra":8.07116484,"dec":-32.67484684},
+{"mag":5.96,"ra":8.07844653,"dec":-50.59039998},
+{"mag":5.39,"ra":8.07977394,"dec":79.47974268},
+{"mag":5.52,"ra":8.08436296,"dec":-53.1079136},
+{"mag":5.14,"ra":8.08458605,"dec":13.11837053},
+{"mag":5.96,"ra":8.10511097,"dec":22.63551163},
+{"mag":5.04,"ra":8.11120663,"dec":-45.26604229},
+{"mag":5.33,"ra":8.12167948,"dec":-20.55434589},
+{"mag":2.83,"ra":8.12575059,"dec":-24.30443677},
+{"mag":5.3,"ra":8.12940034,"dec":21.58197937},
+{"mag":4.35,"ra":8.13217799,"dec":-68.61713647},
+{"mag":4.78,"ra":8.14097319,"dec":51.50667575},
+{"mag":4.36,"ra":8.14323824,"dec":-2.98377649},
+{"mag":4.74,"ra":8.15023843,"dec":-61.3017058},
+{"mag":4.4,"ra":8.15045651,"dec":-19.24500094},
+{"mag":5.66,"ra":8.15264291,"dec":-48.68440955},
+{"mag":5.66,"ra":8.15792775,"dec":-16.24890678},
+{"mag":1.75,"ra":8.15887648,"dec":-47.33661177},
+{"mag":5.66,"ra":8.15934215,"dec":-56.08547484},
+{"mag":5.2,"ra":8.15997862,"dec":-44.12277919},
+{"mag":5.23,"ra":8.16198877,"dec":-47.9372165},
+{"mag":5.91,"ra":8.16772214,"dec":58.2484227},
+{"mag":5.73,"ra":8.17422999,"dec":25.50817993},
+{"mag":5.53,"ra":8.17777126,"dec":-13.79934746},
+{"mag":5.83,"ra":8.18633462,"dec":-48.46200365},
+{"mag":4.72,"ra":8.18786703,"dec":-12.92701835},
+{"mag":4.44,"ra":8.18930562,"dec":-39.61855304},
+{"mag":4.73,"ra":8.19052689,"dec":-42.98728888},
+{"mag":5.36,"ra":8.19250826,"dec":-7.77247623},
+{"mag":5.77,"ra":8.19999201,"dec":-46.64436989},
+{"mag":4.67,"ra":8.20353023,"dec":17.64813756},
+{"mag":5.34,"ra":8.21355238,"dec":68.47405416},
+{"mag":5.62,"ra":8.21913181,"dec":29.6565862},
+{"mag":4.99,"ra":8.22221528,"dec":-15.78821451},
+{"mag":4.78,"ra":8.22486734,"dec":-35.89954225},
+{"mag":5.52,"ra":8.22617405,"dec":-50.19606698},
+{"mag":5.14,"ra":8.22671202,"dec":-46.9916532},
+{"mag":5.88,"ra":8.23061069,"dec":56.45231827},
+{"mag":5.09,"ra":8.23286613,"dec":-36.32229977},
+{"mag":4.42,"ra":8.23413531,"dec":-40.34773028},
+{"mag":5.77,"ra":8.23702481,"dec":-35.49007215},
+{"mag":5.86,"ra":8.2399662,"dec":-45.83454842},
+{"mag":5.16,"ra":8.25443165,"dec":-62.91561677},
+{"mag":3.53,"ra":8.2752634,"dec":9.18566295},
+{"mag":5.63,"ra":8.29733867,"dec":59.57112846},
+{"mag":5.59,"ra":8.30482986,"dec":-35.45170517},
+{"mag":5.06,"ra":8.30521599,"dec":-65.6132455},
+{"mag":5.95,"ra":8.30660563,"dec":-12.62976955},
+{"mag":4.05,"ra":8.30868523,"dec":-76.91998251},
+{"mag":4.44,"ra":8.30927588,"dec":-36.65953286},
+{"mag":5.73,"ra":8.32143991,"dec":62.50713912},
+{"mag":5.55,"ra":8.32561454,"dec":75.75686931},
+{"mag":5.33,"ra":8.33027654,"dec":-71.51499632},
+{"mag":5.63,"ra":8.33348864,"dec":-71.50546247},
+{"mag":5.13,"ra":8.33440897,"dec":27.21862138},
+{"mag":5.8,"ra":8.33914792,"dec":20.74783186},
+{"mag":5.89,"ra":8.34055477,"dec":57.74324466},
+{"mag":5.92,"ra":8.34226369,"dec":24.02235699},
+{"mag":4.34,"ra":8.34413553,"dec":-77.4845764},
+{"mag":5.96,"ra":8.35336165,"dec":-57.97323049},
+{"mag":5.18,"ra":8.35584704,"dec":-36.48419365},
+{"mag":5.58,"ra":8.35589566,"dec":-20.07901245},
+{"mag":4.83,"ra":8.35639843,"dec":-33.05437199},
+{"mag":5.71,"ra":8.36518401,"dec":-17.58630046},
+{"mag":5.28,"ra":8.36792276,"dec":-73.40005893},
+{"mag":1.86,"ra":8.37524019,"dec":-59.50953829},
+{"mag":4.79,"ra":8.37547184,"dec":-48.49039742},
+{"mag":5.88,"ra":8.38053878,"dec":-26.34823475},
+{"mag":4.25,"ra":8.38059169,"dec":43.18837233},
+{"mag":5.92,"ra":8.38169478,"dec":-7.54313579},
+{"mag":5.89,"ra":8.38199439,"dec":-52.12377702},
+{"mag":5.94,"ra":8.38940876,"dec":18.33228008},
+{"mag":5.52,"ra":8.39681365,"dec":53.21995142},
+{"mag":5.67,"ra":8.40566167,"dec":-80.91471955},
+{"mag":5.61,"ra":8.40976055,"dec":-3.75117744},
+{"mag":5.67,"ra":8.41533236,"dec":-23.15381698},
+{"mag":5.97,"ra":8.41589321,"dec":-42.76985034},
+{"mag":5.32,"ra":8.41771049,"dec":-24.04626227},
+{"mag":5.18,"ra":8.425372,"dec":-51.72745683},
+{"mag":5.74,"ra":8.42654174,"dec":2.10224935},
+{"mag":3.91,"ra":8.42768636,"dec":-3.90636482},
+{"mag":3.77,"ra":8.42895729,"dec":-66.13652042},
+{"mag":5.95,"ra":8.43100468,"dec":-64.60065452},
+{"mag":5.45,"ra":8.43108974,"dec":-42.15310407},
+{"mag":5.13,"ra":8.43188534,"dec":7.56452889},
+{"mag":5.96,"ra":8.43211016,"dec":-14.9297554},
+{"mag":5.6,"ra":8.44089683,"dec":-3.98729976},
+{"mag":5.58,"ra":8.44103554,"dec":27.89386239},
+{"mag":5.52,"ra":8.44500192,"dec":-12.53453988},
+{"mag":5.56,"ra":8.44554162,"dec":12.65486252},
+{"mag":5.51,"ra":8.4546632,"dec":-70.09359517},
+{"mag":5.08,"ra":8.46018077,"dec":-53.08853976},
+{"mag":5.75,"ra":8.46650711,"dec":-35.11378822},
+{"mag":5.94,"ra":8.47704103,"dec":14.21085416},
+{"mag":5.33,"ra":8.48465504,"dec":-47.92893948},
+{"mag":5.82,"ra":8.4854369,"dec":-44.16043155},
+{"mag":5.03,"ra":8.49096888,"dec":-44.72482773},
+{"mag":5.98,"ra":8.49601503,"dec":-46.33172799},
+{"mag":5.89,"ra":8.49619276,"dec":67.29741477},
+{"mag":3.35,"ra":8.50445282,"dec":60.7184311},
+{"mag":5.61,"ra":8.50794993,"dec":-32.15928753},
+{"mag":5.71,"ra":8.52515867,"dec":24.08121618},
+{"mag":5.42,"ra":8.52526222,"dec":-19.57743956},
+{"mag":5.33,"ra":8.52660191,"dec":18.09455771},
+{"mag":5.68,"ra":8.53471469,"dec":-53.21196039},
+{"mag":5.33,"ra":8.54514576,"dec":20.44127049},
+{"mag":5.88,"ra":8.54862659,"dec":38.01678677},
+{"mag":5.92,"ra":8.56067967,"dec":-38.8488327},
+{"mag":5.89,"ra":8.56207964,"dec":4.75701524},
+{"mag":5.8,"ra":8.56712143,"dec":-2.15160482},
+{"mag":5.47,"ra":8.57671869,"dec":65.14527349},
+{"mag":5.01,"ra":8.5787802,"dec":-49.94424627},
+{"mag":5.76,"ra":8.57886209,"dec":36.41971903},
+{"mag":5.27,"ra":8.58766105,"dec":-58.22476298},
+{"mag":4.84,"ra":8.58879117,"dec":-58.0092947},
+{"mag":5.72,"ra":8.5911698,"dec":-7.98233083},
+{"mag":5.95,"ra":8.59131163,"dec":-26.84353277},
+{"mag":5.91,"ra":8.59751493,"dec":6.62053814},
+{"mag":5.79,"ra":8.59778884,"dec":-50.96967696},
+{"mag":5.92,"ra":8.61827397,"dec":9.65559645},
+{"mag":5.45,"ra":8.62190182,"dec":-62.85341217},
+{"mag":4.11,"ra":8.62740038,"dec":-42.98910371},
+{"mag":4.14,"ra":8.62761315,"dec":5.70379868},
+{"mag":5.24,"ra":8.63115789,"dec":-26.25497008},
+{"mag":5.96,"ra":8.63861052,"dec":32.80202805},
+{"mag":5.66,"ra":8.6395165,"dec":53.4015752},
+{"mag":4.45,"ra":8.64595799,"dec":3.34147477},
+{"mag":5.19,"ra":8.65142451,"dec":-70.38665235},
+{"mag":5.05,"ra":8.65224163,"dec":-22.6629058},
+{"mag":5.63,"ra":8.65326174,"dec":65.02069298},
+{"mag":5.91,"ra":8.65490309,"dec":52.71169928},
+{"mag":5.45,"ra":8.65662967,"dec":-53.43982462},
+{"mag":4.86,"ra":8.66180298,"dec":-29.56086189},
+{"mag":5.18,"ra":8.66600626,"dec":-53.05478181},
+{"mag":4.98,"ra":8.66708871,"dec":-12.47537441},
+{"mag":3.97,"ra":8.66837126,"dec":-35.30830091},
+{"mag":4.59,"ra":8.67024961,"dec":64.32787175},
+{"mag":5.56,"ra":8.67152468,"dec":-53.01545412},
+{"mag":3.6,"ra":8.67155811,"dec":-52.92197259},
+{"mag":5.2,"ra":8.67200475,"dec":-40.2638933},
+{"mag":5.67,"ra":8.67646012,"dec":-45.19111481},
+{"mag":4.31,"ra":8.67695421,"dec":-59.76101468},
+{"mag":3.77,"ra":8.67710424,"dec":-46.64875492},
+{"mag":5.35,"ra":8.68362445,"dec":45.83378521},
+{"mag":5.9,"ra":8.6848123,"dec":-48.922689},
+{"mag":4.74,"ra":8.68698335,"dec":-47.31714129},
+{"mag":5.46,"ra":8.6887782,"dec":-78.96342637},
+{"mag":4.87,"ra":8.69537054,"dec":-15.94314865},
+{"mag":5.2,"ra":8.69914264,"dec":-45.4107261},
+{"mag":5.48,"ra":8.7044993,"dec":-48.099099},
+{"mag":5.49,"ra":8.70528195,"dec":-53.10011485},
+{"mag":4.83,"ra":8.70705844,"dec":-53.11404062},
+{"mag":5.62,"ra":8.72009312,"dec":12.6808708},
+{"mag":4.3,"ra":8.72041287,"dec":3.39866539},
+{"mag":4.66,"ra":8.72144808,"dec":21.46859609},
+{"mag":3.68,"ra":8.72654096,"dec":-33.18641133},
+{"mag":5.15,"ra":8.72785444,"dec":-49.82281081},
+{"mag":4.63,"ra":8.72788341,"dec":-7.23372781},
+{"mag":4.05,"ra":8.73999055,"dec":-42.64932331},
+{"mag":3.94,"ra":8.7447528,"dec":18.15486399},
+{"mag":1.93,"ra":8.7450548,"dec":-54.70856797},
+{"mag":5.63,"ra":8.74584572,"dec":10.08171256},
+{"mag":5.74,"ra":8.74775914,"dec":-37.1472599},
+{"mag":5.79,"ra":8.76534296,"dec":-79.50457035},
+{"mag":3.87,"ra":8.7671263,"dec":-46.0415392},
+{"mag":5.7,"ra":8.76734788,"dec":-2.04876829},
+{"mag":4.32,"ra":8.77292429,"dec":-13.54770494},
+{"mag":5.43,"ra":8.77515309,"dec":-45.91251639},
+{"mag":4.03,"ra":8.7782873,"dec":28.76000509},
+{"mag":4.5,"ra":8.77848866,"dec":-56.76979718},
+{"mag":3.38,"ra":8.77962395,"dec":6.41890691},
+{"mag":5.89,"ra":8.78223805,"dec":12.11007629},
+{"mag":5.28,"ra":8.78750212,"dec":-1.89705972},
+{"mag":5.71,"ra":8.78856901,"dec":-46.15542775},
+{"mag":4.35,"ra":8.8072169,"dec":5.83788486},
+{"mag":5.3,"ra":8.8227049,"dec":-3.44297063},
+{"mag":5.47,"ra":8.82754634,"dec":-40.32015599},
+{"mag":4.94,"ra":8.82990231,"dec":-45.30790977},
+{"mag":5.19,"ra":8.8309725,"dec":-32.78040797},
+{"mag":5.86,"ra":8.83395601,"dec":-29.46301021},
+{"mag":4.02,"ra":8.84222536,"dec":-27.71005869},
+{"mag":5.09,"ra":8.84262884,"dec":-46.52919614},
+{"mag":5.34,"ra":8.84296687,"dec":-66.79322494},
+{"mag":5.55,"ra":8.85956659,"dec":-7.17721266},
+{"mag":5.59,"ra":8.86014785,"dec":-57.63361532},
+{"mag":5.15,"ra":8.8657895,"dec":43.72649196},
+{"mag":5.98,"ra":8.86945852,"dec":42.00288543},
+{"mag":5.96,"ra":8.86993821,"dec":45.3129001},
+{"mag":5.67,"ra":8.87628452,"dec":32.47412331},
+{"mag":5.96,"ra":8.87670358,"dec":28.33138843},
+{"mag":5.92,"ra":8.87739363,"dec":-48.35909798},
+{"mag":5.79,"ra":8.8800057,"dec":-38.72413106},
+{"mag":5.72,"ra":8.88960274,"dec":61.96221364},
+{"mag":5.78,"ra":8.89685248,"dec":-60.35393124},
+{"mag":5.31,"ra":8.8973891,"dec":-47.52071984},
+{"mag":5.4,"ra":8.90408464,"dec":30.57917723},
+{"mag":3.84,"ra":8.91746157,"dec":-60.64471195},
+{"mag":5.7,"ra":8.91993255,"dec":-54.96554657},
+{"mag":5.75,"ra":8.92011641,"dec":-18.24120659},
+{"mag":3.11,"ra":8.92324579,"dec":5.9455277},
+{"mag":4.87,"ra":8.92542099,"dec":-27.68162589},
+{"mag":5.23,"ra":8.92769133,"dec":27.92756265},
+{"mag":5.44,"ra":8.93209891,"dec":11.62605826},
+{"mag":4.68,"ra":8.93868834,"dec":-52.72351071},
+{"mag":5.9,"ra":8.94182728,"dec":40.20156718},
+{"mag":5.95,"ra":8.94281443,"dec":-16.70868242},
+{"mag":5.57,"ra":8.94374632,"dec":64.60403054},
+{"mag":5.43,"ra":8.94496757,"dec":-85.66323432},
+{"mag":5.72,"ra":8.94723811,"dec":45.63175477},
+{"mag":5.44,"ra":8.94906509,"dec":32.91058931},
+{"mag":4.93,"ra":8.94956307,"dec":-59.22935883},
+{"mag":5.22,"ra":8.95414248,"dec":15.32271727},
+{"mag":5.68,"ra":8.95976751,"dec":15.58123453},
+{"mag":5.88,"ra":8.96543693,"dec":-48.57293357},
+{"mag":4.26,"ra":8.97477693,"dec":11.85777198},
+{"mag":5.8,"ra":8.9788291,"dec":-16.13324587},
+{"mag":5.17,"ra":8.9812295,"dec":-47.23482313},
+{"mag":3.12,"ra":8.98689965,"dec":48.04234956},
+{"mag":5.17,"ra":8.99010582,"dec":-59.08439697},
+{"mag":5.23,"ra":8.99241237,"dec":32.41864339},
+{"mag":4.45,"ra":9.00151114,"dec":-41.25373789},
+{"mag":3.96,"ra":9.01076451,"dec":41.78344401},
+{"mag":5.8,"ra":9.0127075,"dec":-60.96384715},
+{"mag":5.89,"ra":9.01902431,"dec":-68.68391841},
+{"mag":5.56,"ra":9.02246539,"dec":-41.86429036},
+{"mag":5.89,"ra":9.02336923,"dec":32.25229474},
+{"mag":5.23,"ra":9.0290481,"dec":-52.18871825},
+{"mag":5.64,"ra":9.03278206,"dec":-0.48284175},
+{"mag":4.0,"ra":9.04077745,"dec":-66.39584369},
+{"mag":4.74,"ra":9.04242386,"dec":67.62957486},
+{"mag":5.45,"ra":9.04562973,"dec":24.45293256},
+{"mag":5.85,"ra":9.04578414,"dec":7.29826333},
+{"mag":3.57,"ra":9.06043299,"dec":47.15665934},
+{"mag":5.74,"ra":9.06677857,"dec":54.28387681},
+{"mag":3.75,"ra":9.0692557,"dec":-47.09771376},
+{"mag":4.47,"ra":9.08578619,"dec":-72.60269387},
+{"mag":5.48,"ra":9.09002957,"dec":48.53035841},
+{"mag":4.66,"ra":9.09399501,"dec":-70.53852074},
+{"mag":4.99,"ra":9.09954939,"dec":5.09234249},
+{"mag":4.56,"ra":9.10883001,"dec":38.45225024},
+{"mag":5.23,"ra":9.12911787,"dec":10.66821521},
+{"mag":2.23,"ra":9.13327141,"dec":-43.43262406},
+{"mag":5.42,"ra":9.13335317,"dec":29.65422729},
+{"mag":4.62,"ra":9.13412701,"dec":-25.85853691},
+{"mag":5.15,"ra":9.13987031,"dec":66.87333335},
+{"mag":5.6,"ra":9.14505334,"dec":-8.58951324},
+{"mag":5.95,"ra":9.14650583,"dec":26.63001213},
+{"mag":5.95,"ra":9.14755686,"dec":33.88249742},
+{"mag":4.46,"ra":9.1478849,"dec":51.60472728},
+{"mag":5.73,"ra":9.15118016,"dec":-18.32859911},
+{"mag":5.76,"ra":9.15319507,"dec":-12.35770752},
+{"mag":5.16,"ra":9.15598164,"dec":22.04544728},
+{"mag":5.47,"ra":9.15988328,"dec":-8.78763061},
+{"mag":5.59,"ra":9.16566987,"dec":-30.36528248},
+{"mag":4.8,"ra":9.17320171,"dec":67.13423886},
+{"mag":4.67,"ra":9.18192532,"dec":63.51378087},
+{"mag":3.43,"ra":9.18280702,"dec":-58.96693014},
+{"mag":4.99,"ra":9.18455627,"dec":-44.86791223},
+{"mag":3.96,"ra":9.18799107,"dec":-62.31701587},
+{"mag":5.78,"ra":9.19260805,"dec":-46.58392947},
+{"mag":5.72,"ra":9.19965859,"dec":-19.74774055},
+{"mag":5.56,"ra":9.20848364,"dec":-43.61329176},
+{"mag":5.54,"ra":9.21545133,"dec":-59.41396656},
+{"mag":1.67,"ra":9.22006688,"dec":-69.71747245},
+{"mag":5.92,"ra":9.22624313,"dec":-47.33843989},
+{"mag":5.3,"ra":9.23006386,"dec":43.21791261},
+{"mag":5.85,"ra":9.23561939,"dec":-44.14585354},
+{"mag":5.26,"ra":9.23834016,"dec":-55.56970109},
+{"mag":5.18,"ra":9.23904198,"dec":61.42339501},
+{"mag":3.89,"ra":9.23938701,"dec":2.31502422},
+{"mag":5.24,"ra":9.24014021,"dec":-43.22752192},
+{"mag":5.85,"ra":9.24921275,"dec":-37.60236629},
+{"mag":5.36,"ra":9.25385464,"dec":14.9415367},
+{"mag":5.98,"ra":9.2539884,"dec":34.63339985},
+{"mag":4.92,"ra":9.26021159,"dec":-38.56991789},
+{"mag":4.63,"ra":9.26251929,"dec":-37.41312644},
+{"mag":5.28,"ra":9.26383568,"dec":56.74147744},
+{"mag":5.93,"ra":9.26465275,"dec":72.94646226},
+{"mag":4.8,"ra":9.26979967,"dec":54.02171207},
+{"mag":4.34,"ra":9.27002845,"dec":-57.54143764},
+{"mag":5.12,"ra":9.27306594,"dec":-44.26574592},
+{"mag":5.49,"ra":9.27816022,"dec":-8.74475953},
+{"mag":5.24,"ra":9.27825606,"dec":-6.35315487},
+{"mag":5.31,"ra":9.28252741,"dec":-39.40145479},
+{"mag":2.21,"ra":9.28484122,"dec":-59.27526115},
+{"mag":5.83,"ra":9.28548114,"dec":-14.57405765},
+{"mag":5.38,"ra":9.2881668,"dec":-68.68957252},
+{"mag":5.28,"ra":9.29033647,"dec":-74.89439024},
+{"mag":5.86,"ra":9.29100946,"dec":-74.73467629},
+{"mag":5.96,"ra":9.29199044,"dec":46.81719916},
+{"mag":5.26,"ra":9.30163621,"dec":-51.05089519},
+{"mag":5.94,"ra":9.30720664,"dec":35.36412574},
+{"mag":5.83,"ra":9.31176703,"dec":-51.5606599},
+{"mag":3.82,"ra":9.31407426,"dec":36.80289763},
+{"mag":5.79,"ra":9.32586432,"dec":-15.83453443},
+{"mag":4.77,"ra":9.32955521,"dec":-11.97488214},
+{"mag":4.8,"ra":9.3413961,"dec":-9.55562948},
+{"mag":4.79,"ra":9.34911953,"dec":-62.40463293},
+{"mag":3.14,"ra":9.35096077,"dec":34.39252592},
+{"mag":4.71,"ra":9.35822189,"dec":-25.96541642},
+{"mag":5.79,"ra":9.36202785,"dec":56.6992485},
+{"mag":5.61,"ra":9.36391907,"dec":-55.51487092},
+{"mag":5.56,"ra":9.36414996,"dec":-42.19473814},
+{"mag":2.47,"ra":9.36856367,"dec":-55.01069531},
+{"mag":5.74,"ra":9.37333195,"dec":-46.04750246},
+{"mag":4.71,"ra":9.38676009,"dec":-28.83392305},
+{"mag":5.99,"ra":9.4015266,"dec":-61.64878694},
+{"mag":5.34,"ra":9.40270261,"dec":-80.78720514},
+{"mag":4.47,"ra":9.41091093,"dec":26.18244091},
+{"mag":5.6,"ra":9.42334508,"dec":-5.1173788},
+{"mag":5.77,"ra":9.42427157,"dec":-61.95061204},
+{"mag":5.09,"ra":9.43832709,"dec":-53.37893587},
+{"mag":5.46,"ra":9.45180502,"dec":-71.60209195},
+{"mag":4.72,"ra":9.4550826,"dec":-22.3434176},
+{"mag":1.99,"ra":9.45979217,"dec":-8.65868335},
+{"mag":5.38,"ra":9.46303252,"dec":-6.07102871},
+{"mag":5.4,"ra":9.47427136,"dec":9.05677114},
+{"mag":5.72,"ra":9.47477605,"dec":8.18837326},
+{"mag":5.9,"ra":9.47516606,"dec":-66.70198874},
+{"mag":5.4,"ra":9.47777629,"dec":45.6017947},
+{"mag":5.91,"ra":9.47977399,"dec":-62.2732034},
+{"mag":4.59,"ra":9.48578854,"dec":-2.76895627},
+{"mag":5.66,"ra":9.48684837,"dec":-20.74914438},
+{"mag":4.51,"ra":9.48742707,"dec":-35.9513478},
+{"mag":5.49,"ra":9.49847742,"dec":-26.58961727},
+{"mag":5.45,"ra":9.50142443,"dec":-51.51719294},
+{"mag":5.86,"ra":9.50626089,"dec":-15.57719292},
+{"mag":5.88,"ra":9.50651481,"dec":-58.36190438},
+{"mag":3.6,"ra":9.51169804,"dec":-40.46688763},
+{"mag":5.87,"ra":9.51200929,"dec":33.65582773},
+{"mag":5.75,"ra":9.51280042,"dec":-31.88917107},
+{"mag":3.16,"ra":9.52037604,"dec":-57.0343916},
+{"mag":3.65,"ra":9.52543601,"dec":63.06179545},
+{"mag":5.91,"ra":9.52560908,"dec":-31.87183113},
+{"mag":5.39,"ra":9.52568045,"dec":35.10350902},
+{"mag":5.86,"ra":9.52581487,"dec":-35.71432898},
+{"mag":5.46,"ra":9.52675644,"dec":-73.08091865},
+{"mag":4.32,"ra":9.52867787,"dec":22.96806545},
+{"mag":4.99,"ra":9.5324423,"dec":11.3000307},
+{"mag":5.07,"ra":9.53266183,"dec":9.7157982},
+{"mag":4.54,"ra":9.53303743,"dec":-1.18465438},
+{"mag":5.35,"ra":9.53868631,"dec":-40.64932106},
+{"mag":5.74,"ra":9.53900819,"dec":-19.40032613},
+{"mag":3.17,"ra":9.54786812,"dec":51.67860208},
+{"mag":5.95,"ra":9.54882754,"dec":-13.51680632},
+{"mag":5.02,"ra":9.55346458,"dec":-21.11575904},
+{"mag":5.92,"ra":9.5572488,"dec":-22.86401784},
+{"mag":5.12,"ra":9.56237775,"dec":-49.0050932},
+{"mag":5.07,"ra":9.56486254,"dec":-80.94129374},
+{"mag":5.01,"ra":9.56911146,"dec":-51.25528201},
+{"mag":4.54,"ra":9.57038249,"dec":36.39761338},
+{"mag":4.08,"ra":9.57407306,"dec":-59.22976797},
+{"mag":4.54,"ra":9.57471329,"dec":69.83015419},
+{"mag":5.56,"ra":9.5757339,"dec":-5.91480636},
+{"mag":4.47,"ra":9.58041525,"dec":52.05156754},
+{"mag":5.77,"ra":9.58149683,"dec":72.2058641},
+{"mag":4.81,"ra":9.58440346,"dec":39.62144313},
+{"mag":5.4,"ra":9.59445206,"dec":35.81076694},
+{"mag":5.57,"ra":9.61190291,"dec":31.16184064},
+{"mag":4.34,"ra":9.61379361,"dec":-49.3551286},
+{"mag":5.68,"ra":9.61673545,"dec":-25.29684739},
+{"mag":5.73,"ra":9.61738629,"dec":16.43795912},
+{"mag":4.28,"ra":9.61815331,"dec":81.32642085},
+{"mag":5.62,"ra":9.61940822,"dec":-32.17861272},
+{"mag":5.44,"ra":9.62018782,"dec":-53.66848607},
+{"mag":5.0,"ra":9.6201968,"dec":6.83577519},
+{"mag":5.96,"ra":9.62456088,"dec":-36.09599061},
+{"mag":5.51,"ra":9.63373172,"dec":-43.19086905},
+{"mag":5.28,"ra":9.63938523,"dec":40.23976693},
+{"mag":4.68,"ra":9.6409403,"dec":4.64941422},
+{"mag":4.51,"ra":9.6558447,"dec":-61.32810523},
+{"mag":5.96,"ra":9.65775461,"dec":67.27232436},
+{"mag":3.9,"ra":9.66425943,"dec":-1.14265722},
+{"mag":5.07,"ra":9.67177198,"dec":-14.33224542},
+{"mag":5.3,"ra":9.67850073,"dec":-57.98357162},
+{"mag":5.8,"ra":9.68391749,"dec":-57.25944118},
+{"mag":3.52,"ra":9.68586607,"dec":9.89239902},
+{"mag":4.76,"ra":9.68806276,"dec":-23.59152139},
+{"mag":5.9,"ra":9.69308482,"dec":31.27784047},
+{"mag":5.99,"ra":9.69664999,"dec":-55.21376962},
+{"mag":5.61,"ra":9.70010568,"dec":39.75796859},
+{"mag":4.93,"ra":9.70407542,"dec":-23.91620867},
+{"mag":5.72,"ra":9.70414807,"dec":69.23770604},
+{"mag":5.15,"ra":9.71589957,"dec":72.25268512},
+{"mag":5.64,"ra":9.7259087,"dec":29.97472479},
+{"mag":5.56,"ra":9.72841703,"dec":-53.89136176},
+{"mag":5.36,"ra":9.72886153,"dec":14.02170696},
+{"mag":4.78,"ra":9.73670284,"dec":-27.76956287},
+{"mag":3.69,"ra":9.75411876,"dec":-62.50792328},
+{"mag":2.97,"ra":9.76419511,"dec":23.77427792},
+{"mag":5.8,"ra":9.76945579,"dec":6.70861426},
+{"mag":5.43,"ra":9.77233852,"dec":-76.77598144},
+{"mag":5.67,"ra":9.77314919,"dec":11.81000106},
+{"mag":5.65,"ra":9.77323416,"dec":1.78568624},
+{"mag":5.58,"ra":9.77510584,"dec":-44.75505925},
+{"mag":5.09,"ra":9.77546226,"dec":57.12798971},
+{"mag":2.92,"ra":9.78503822,"dec":-65.07201888},
+{"mag":5.08,"ra":9.80977356,"dec":46.02123319},
+{"mag":5.95,"ra":9.82448571,"dec":-37.1867849},
+{"mag":5.09,"ra":9.83254485,"dec":-45.73276023},
+{"mag":5.72,"ra":9.84499163,"dec":-46.93400208},
+{"mag":5.56,"ra":9.84877724,"dec":-62.74513696},
+{"mag":3.78,"ra":9.84991436,"dec":59.03910437},
+{"mag":5.79,"ra":9.85334264,"dec":-59.42567316},
+{"mag":5.62,"ra":9.85548947,"dec":-46.19395369},
+{"mag":4.11,"ra":9.85796735,"dec":-14.84654997},
+{"mag":4.58,"ra":9.86130232,"dec":-46.54764424},
+{"mag":5.29,"ra":9.86472905,"dec":24.3957937},
+{"mag":4.55,"ra":9.86843337,"dec":54.06428574},
+{"mag":5.07,"ra":9.8751308,"dec":-8.10491559},
+{"mag":3.88,"ra":9.87943268,"dec":26.00708498},
+{"mag":5.9,"ra":9.89525747,"dec":5.95856912},
+{"mag":5.95,"ra":9.89725309,"dec":-51.1467146},
+{"mag":4.87,"ra":9.90345515,"dec":-25.93248205},
+{"mag":5.72,"ra":9.90490791,"dec":-45.28352716},
+{"mag":5.71,"ra":9.91424015,"dec":-50.24397661},
+{"mag":4.94,"ra":9.9145103,"dec":-19.00926985},
+{"mag":5.27,"ra":9.92861269,"dec":49.81979501},
+{"mag":5.85,"ra":9.94056288,"dec":8.93310774},
+{"mag":5.83,"ra":9.94318612,"dec":-33.41854978},
+{"mag":3.52,"ra":9.94770968,"dec":-54.5677973},
+{"mag":5.97,"ra":9.95376997,"dec":57.4183508},
+{"mag":5.11,"ra":9.96142902,"dec":41.05569741},
+{"mag":5.26,"ra":9.97038636,"dec":12.44483936},
+{"mag":5.86,"ra":9.97303052,"dec":72.87959798},
+{"mag":5.23,"ra":9.98120556,"dec":-35.89093311},
+{"mag":5.75,"ra":9.99341046,"dec":29.64532453},
+{"mag":5.5,"ra":9.99769997,"dec":56.81187557},
+{"mag":4.68,"ra":10.00356231,"dec":8.04427686},
+{"mag":5.53,"ra":10.0121957,"dec":-82.21474569},
+{"mag":5.37,"ra":10.01695008,"dec":31.9247146},
+{"mag":5.93,"ra":10.0333625,"dec":-60.42089968},
+{"mag":5.68,"ra":10.04693305,"dec":21.9492707},
+{"mag":5.7,"ra":10.07250464,"dec":-24.28559599},
+{"mag":5.71,"ra":10.07676254,"dec":53.8917256},
+{"mag":4.6,"ra":10.08541457,"dec":-13.06467435},
+{"mag":5.06,"ra":10.103117,"dec":-47.36986491},
+{"mag":5.59,"ra":10.11930269,"dec":-17.14159635},
+{"mag":3.48,"ra":10.12220929,"dec":16.76266572},
+{"mag":4.49,"ra":10.12381254,"dec":35.24469176},
+{"mag":4.39,"ra":10.13175523,"dec":9.99766389},
+{"mag":4.48,"ra":10.13230432,"dec":-0.37162786},
+{"mag":1.36,"ra":10.13957205,"dec":11.96719513},
+{"mag":5.26,"ra":10.14523273,"dec":-65.81553262},
+{"mag":4.85,"ra":10.14895935,"dec":-51.81126187},
+{"mag":5.8,"ra":10.15838877,"dec":-68.68283264},
+{"mag":5.3,"ra":10.16832209,"dec":-12.81565791},
+{"mag":5.91,"ra":10.16876603,"dec":-8.40816325},
+{"mag":3.61,"ra":10.17649919,"dec":-12.35383921},
+{"mag":5.98,"ra":10.17713774,"dec":-41.71493294},
+{"mag":5.64,"ra":10.18218368,"dec":-8.41835129},
+{"mag":5.86,"ra":10.18688698,"dec":37.40197095},
+{"mag":5.7,"ra":10.1962422,"dec":-58.06055982},
+{"mag":5.77,"ra":10.21344255,"dec":4.61469047},
+{"mag":5.27,"ra":10.22302267,"dec":-51.23293774},
+{"mag":5.78,"ra":10.22445671,"dec":-51.75580487},
+{"mag":5.15,"ra":10.22518961,"dec":-66.37283938},
+{"mag":3.29,"ra":10.22896636,"dec":-70.03792169},
+{"mag":5.91,"ra":10.22943895,"dec":-40.3460764},
+{"mag":3.85,"ra":10.24563159,"dec":-42.12206281},
+{"mag":5.59,"ra":10.25876345,"dec":-43.11224108},
+{"mag":5.49,"ra":10.27068872,"dec":29.31055982},
+{"mag":5.95,"ra":10.27567137,"dec":23.50301282},
+{"mag":5.42,"ra":10.27798644,"dec":13.72837138},
+{"mag":3.43,"ra":10.27816787,"dec":23.4173284},
+{"mag":5.84,"ra":10.27828876,"dec":25.37069774},
+{"mag":3.39,"ra":10.28472369,"dec":-61.33231977},
+{"mag":3.45,"ra":10.2849797,"dec":42.91446855},
+{"mag":5.81,"ra":10.28744461,"dec":23.10645604},
+{"mag":5.25,"ra":10.29386016,"dec":-8.0689212},
+{"mag":5.74,"ra":10.30059739,"dec":65.10837358},
+{"mag":5.52,"ra":10.30211127,"dec":-28.99202661},
+{"mag":5.97,"ra":10.30785168,"dec":-41.66849763},
+{"mag":5.8,"ra":10.31059959,"dec":-56.11067508},
+{"mag":5.66,"ra":10.31808873,"dec":-64.67628786},
+{"mag":4.59,"ra":10.32687922,"dec":-55.02931452},
+{"mag":4.78,"ra":10.32897506,"dec":19.47143591},
+{"mag":2.01,"ra":10.3328227,"dec":19.84186032},
+{"mag":5.66,"ra":10.33797864,"dec":-47.69910004},
+{"mag":4.5,"ra":10.34855972,"dec":-56.04322401},
+{"mag":5.88,"ra":10.35095229,"dec":68.74773415},
+{"mag":5.73,"ra":10.36962647,"dec":41.22986684},
+{"mag":4.82,"ra":10.37211278,"dec":-41.65010791},
+{"mag":3.06,"ra":10.37216756,"dec":41.4994335},
+{"mag":4.97,"ra":10.38282757,"dec":-66.90152522},
+{"mag":5.89,"ra":10.3850938,"dec":33.90815509},
+{"mag":5.93,"ra":10.39069668,"dec":-4.07404512},
+{"mag":5.34,"ra":10.39150381,"dec":-38.00970922},
+{"mag":4.94,"ra":10.40218301,"dec":65.56647366},
+{"mag":5.52,"ra":10.40239288,"dec":33.71853542},
+{"mag":3.99,"ra":10.40659458,"dec":-74.03154474},
+{"mag":5.93,"ra":10.41652799,"dec":-58.57631762},
+{"mag":5.61,"ra":10.4208858,"dec":8.78493853},
+{"mag":5.6,"ra":10.42898629,"dec":-7.06014256},
+{"mag":4.72,"ra":10.43190753,"dec":33.79626364},
+{"mag":3.83,"ra":10.43486251,"dec":-16.83609584},
+{"mag":5.58,"ra":10.44692638,"dec":-54.87731436},
+{"mag":4.28,"ra":10.4525433,"dec":-31.06780228},
+{"mag":4.65,"ra":10.45679951,"dec":-57.63881373},
+{"mag":3.81,"ra":10.4646514,"dec":-58.73940856},
+{"mag":4.2,"ra":10.46474791,"dec":36.70747818},
+{"mag":5.27,"ra":10.48127695,"dec":-64.17228466},
+{"mag":5.19,"ra":10.49131408,"dec":-2.73904701},
+{"mag":5.58,"ra":10.4913926,"dec":-29.66385399},
+{"mag":5.57,"ra":10.49316621,"dec":-30.60707101},
+{"mag":5.52,"ra":10.49505784,"dec":84.25210531},
+{"mag":5.79,"ra":10.50179443,"dec":38.925143},
+{"mag":5.08,"ra":10.50486195,"dec":-0.63697208},
+{"mag":4.72,"ra":10.50557641,"dec":-71.99271995},
+{"mag":4.82,"ra":10.51049009,"dec":55.98061759},
+{"mag":5.59,"ra":10.51662718,"dec":-13.5884676},
+{"mag":4.94,"ra":10.51724293,"dec":-73.2215089},
+{"mag":5.25,"ra":10.51806127,"dec":82.55853791},
+{"mag":4.89,"ra":10.522843,"dec":-53.7159928},
+{"mag":5.9,"ra":10.53093442,"dec":32.3795376},
+{"mag":5.76,"ra":10.53262466,"dec":-45.06671373},
+{"mag":3.3,"ra":10.5337455,"dec":-61.68536031},
+{"mag":5.43,"ra":10.53661066,"dec":14.13720956},
+{"mag":5.91,"ra":10.54267239,"dec":-44.6184503},
+{"mag":5.98,"ra":10.5466157,"dec":-58.66675023},
+{"mag":3.84,"ra":10.5468542,"dec":9.30659431},
+{"mag":5.02,"ra":10.54913353,"dec":-47.00336923},
+{"mag":4.72,"ra":10.55388811,"dec":40.42554046},
+{"mag":5.57,"ra":10.5585921,"dec":34.98870207},
+{"mag":5.08,"ra":10.5669142,"dec":-23.74521609},
+{"mag":5.07,"ra":10.58002043,"dec":6.95361136},
+{"mag":5.67,"ra":10.58394168,"dec":8.65043904},
+{"mag":4.86,"ra":10.58488566,"dec":75.71298403},
+{"mag":5.16,"ra":10.58600621,"dec":57.08254651},
+{"mag":5.5,"ra":10.58690973,"dec":-39.5625967},
+{"mag":4.11,"ra":10.59117177,"dec":-78.60781379},
+{"mag":4.45,"ra":10.59314294,"dec":-57.55763551},
+{"mag":5.08,"ra":10.6057123,"dec":-59.56429542},
+{"mag":5.71,"ra":10.60895074,"dec":-12.22848702},
+{"mag":4.87,"ra":10.62049965,"dec":-27.41268661},
+{"mag":3.84,"ra":10.62173798,"dec":-48.22561631},
+{"mag":5.47,"ra":10.62418785,"dec":-58.73334704},
+{"mag":4.89,"ra":10.62590207,"dec":-13.38445095},
+{"mag":5.89,"ra":10.63407271,"dec":-57.25631096},
+{"mag":4.91,"ra":10.64305918,"dec":-16.87663687},
+{"mag":4.68,"ra":10.64533684,"dec":31.97622008},
+{"mag":4.69,"ra":10.6458368,"dec":-59.18299905},
+{"mag":5.96,"ra":10.64991802,"dec":-58.81688568},
+{"mag":5.55,"ra":10.65159562,"dec":53.66849306},
+{"mag":5.84,"ra":10.65216541,"dec":37.9101113},
+{"mag":4.29,"ra":10.65511459,"dec":-55.60327905},
+{"mag":5.51,"ra":10.66985098,"dec":-65.10024026},
+{"mag":5.74,"ra":10.69675146,"dec":68.44355985},
+{"mag":5.97,"ra":10.69766002,"dec":-79.78330226},
+{"mag":5.12,"ra":10.69910623,"dec":65.71646212},
+{"mag":4.76,"ra":10.70392889,"dec":-64.4664538},
+{"mag":5.36,"ra":10.7112705,"dec":-59.21576469},
+{"mag":5.63,"ra":10.71200245,"dec":-32.71567314},
+{"mag":2.74,"ra":10.71595186,"dec":-64.39447937},
+{"mag":5.51,"ra":10.71720743,"dec":26.32569732},
+{"mag":5.01,"ra":10.71778873,"dec":69.07624525},
+{"mag":5.77,"ra":10.72247452,"dec":4.74774961},
+{"mag":5.08,"ra":10.7236194,"dec":23.18838442},
+{"mag":4.58,"ra":10.72564102,"dec":-60.56662705},
+{"mag":5.18,"ra":10.72586595,"dec":46.2040376},
+{"mag":5.79,"ra":10.72869915,"dec":57.19932851},
+{"mag":5.74,"ra":10.73089292,"dec":-64.24905176},
+{"mag":4.8,"ra":10.73526031,"dec":-63.9611007},
+{"mag":5.95,"ra":10.7511174,"dec":67.41138225},
+{"mag":5.46,"ra":10.75454864,"dec":-80.4695233},
+{"mag":4.45,"ra":10.76309326,"dec":-80.54020283},
+{"mag":5.36,"ra":10.76442004,"dec":30.68240198},
+{"mag":5.33,"ra":10.77127179,"dec":-64.51458587},
+{"mag":5.5,"ra":10.77346864,"dec":18.89162177},
+{"mag":5.49,"ra":10.77370912,"dec":14.19480263},
+{"mag":5.23,"ra":10.77489193,"dec":-64.26326386},
+{"mag":2.69,"ra":10.77947836,"dec":-49.42012517},
+{"mag":4.87,"ra":10.78090115,"dec":-64.38349702},
+{"mag":5.44,"ra":10.78112913,"dec":-17.29683026},
+{"mag":5.14,"ra":10.78263744,"dec":-56.7571908},
+{"mag":5.98,"ra":10.80150441,"dec":-59.91916925},
+{"mag":5.87,"ra":10.80392549,"dec":-31.68785403},
+{"mag":5.92,"ra":10.81126854,"dec":-1.95891494},
+{"mag":5.32,"ra":10.8209535,"dec":10.54526139},
+{"mag":5.85,"ra":10.82346012,"dec":-59.32377833},
+{"mag":3.11,"ra":10.82706446,"dec":-16.19413208},
+{"mag":5.85,"ra":10.82874523,"dec":-9.85262893},
+{"mag":5.61,"ra":10.83251279,"dec":-34.05819988},
+{"mag":5.8,"ra":10.83834982,"dec":-8.89772694},
+{"mag":5.95,"ra":10.85151113,"dec":-3.09264065},
+{"mag":5.66,"ra":10.85307864,"dec":56.58223677},
+{"mag":5.57,"ra":10.85659933,"dec":59.32024369},
+{"mag":5.26,"ra":10.87523685,"dec":-57.24041437},
+{"mag":3.79,"ra":10.88851107,"dec":34.21556641},
+{"mag":5.23,"ra":10.89152267,"dec":-20.13815014},
+{"mag":3.78,"ra":10.89154617,"dec":-58.85326474},
+{"mag":5.91,"ra":10.89204997,"dec":69.85404505},
+{"mag":5.12,"ra":10.89292189,"dec":54.58515228},
+{"mag":5.99,"ra":10.89503594,"dec":-70.72033781},
+{"mag":5.45,"ra":10.89548914,"dec":-2.12924149},
+{"mag":4.66,"ra":10.89964055,"dec":43.19001538},
+{"mag":5.65,"ra":10.90493913,"dec":-13.75805882},
+{"mag":5.95,"ra":10.9082215,"dec":-61.82661289},
+{"mag":5.73,"ra":10.91617223,"dec":34.03490757},
+{"mag":5.93,"ra":10.92146194,"dec":-60.51720824},
+{"mag":4.3,"ra":10.92690222,"dec":24.74975451},
+{"mag":5.91,"ra":10.92842695,"dec":0.73693069},
+{"mag":5.02,"ra":10.92901737,"dec":33.50699574},
+{"mag":5.91,"ra":10.93374528,"dec":6.18538415},
+{"mag":4.6,"ra":10.94527675,"dec":-37.1374629},
+{"mag":5.9,"ra":10.95218941,"dec":-50.76504906},
+{"mag":5.7,"ra":10.98715108,"dec":-33.73745399},
+{"mag":5.03,"ra":10.99117105,"dec":40.43012281},
+{"mag":5.88,"ra":10.99193167,"dec":-16.35368059},
+{"mag":5.99,"ra":10.99242746,"dec":36.09322401},
+{"mag":4.08,"ra":10.9963191,"dec":-18.29909723},
+{"mag":5.81,"ra":10.99984135,"dec":-43.80713489},
+{"mag":4.37,"ra":11.00256828,"dec":-42.22586959},
+{"mag":5.86,"ra":11.00324969,"dec":-14.08329867},
+{"mag":5.47,"ra":11.00408227,"dec":45.52626916},
+{"mag":4.84,"ra":11.00934429,"dec":3.61753351},
+{"mag":4.98,"ra":11.01245342,"dec":6.10150342},
+{"mag":5.06,"ra":11.01402228,"dec":39.21213189},
+{"mag":4.73,"ra":11.03046358,"dec":-2.48449705},
+{"mag":2.34,"ra":11.0306641,"dec":56.38234478},
+{"mag":4.42,"ra":11.0388281,"dec":20.17974575},
+{"mag":5.51,"ra":11.05414672,"dec":-11.30320923},
+{"mag":5.95,"ra":11.06017427,"dec":-0.00083195},
+{"mag":1.81,"ra":11.06217691,"dec":61.75111888},
+{"mag":5.67,"ra":11.07536144,"dec":-47.67918306},
+{"mag":5.43,"ra":11.08172486,"dec":-35.804689},
+{"mag":4.62,"ra":11.08367497,"dec":7.33612254},
+{"mag":4.92,"ra":11.08889795,"dec":-27.29359566},
+{"mag":5.69,"ra":11.09931871,"dec":-27.28781183},
+{"mag":4.62,"ra":11.10902064,"dec":-62.42413654},
+{"mag":5.58,"ra":11.11386921,"dec":-70.87793836},
+{"mag":5.52,"ra":11.11511968,"dec":1.95573365},
+{"mag":5.15,"ra":11.12132112,"dec":-42.63878147},
+{"mag":5.11,"ra":11.14277934,"dec":-61.94717969},
+{"mag":3.93,"ra":11.14316545,"dec":-58.97504198},
+{"mag":5.43,"ra":11.14556879,"dec":-28.08061647},
+{"mag":5.7,"ra":11.14696778,"dec":24.6584498},
+{"mag":5.71,"ra":11.15530887,"dec":36.30943441},
+{"mag":5.89,"ra":11.16070953,"dec":43.20775162},
+{"mag":3.0,"ra":11.16107206,"dec":44.49855337},
+{"mag":5.79,"ra":11.16482816,"dec":-32.36745668},
+{"mag":4.46,"ra":11.19430174,"dec":-22.82560642},
+{"mag":5.37,"ra":11.20920712,"dec":-49.10107805},
+{"mag":4.59,"ra":11.21000563,"dec":-60.3176307},
+{"mag":5.22,"ra":11.21257516,"dec":-64.16978296},
+{"mag":5.77,"ra":11.22074716,"dec":-44.37222081},
+{"mag":5.74,"ra":11.22521976,"dec":-59.6193167},
+{"mag":5.75,"ra":11.22761379,"dec":-53.2319031},
+{"mag":5.4,"ra":11.2293278,"dec":-0.06950857},
+{"mag":5.79,"ra":11.23383522,"dec":8.06095499},
+{"mag":2.56,"ra":11.23511447,"dec":20.52403384},
+{"mag":3.33,"ra":11.23734469,"dec":15.4297631},
+{"mag":4.56,"ra":11.25340086,"dec":23.09552528},
+{"mag":5.31,"ra":11.26441578,"dec":13.30759308},
+{"mag":4.45,"ra":11.27771224,"dec":-3.65151412},
+{"mag":5.88,"ra":11.2783128,"dec":49.47627707},
+{"mag":5.18,"ra":11.28815783,"dec":2.01090315},
+{"mag":3.49,"ra":11.30798759,"dec":33.09423881},
+{"mag":5.9,"ra":11.31527263,"dec":1.65053072},
+{"mag":4.76,"ra":11.31887317,"dec":38.18572227},
+{"mag":5.99,"ra":11.32134542,"dec":-64.58259742},
+{"mag":3.56,"ra":11.3223674,"dec":-14.77904358},
+{"mag":3.9,"ra":11.35012284,"dec":-54.49101395},
+{"mag":4.05,"ra":11.35229115,"dec":6.02935289},
+{"mag":4.99,"ra":11.38044827,"dec":43.48273665},
+{"mag":5.82,"ra":11.38560147,"dec":-56.77936853},
+{"mag":5.0,"ra":11.38686175,"dec":-36.16476782},
+{"mag":5.09,"ra":11.3892865,"dec":-64.95473134},
+{"mag":5.08,"ra":11.38946455,"dec":-18.77990277},
+{"mag":4.0,"ra":11.39871355,"dec":10.52969772},
+{"mag":5.39,"ra":11.40064909,"dec":1.40776375},
+{"mag":5.55,"ra":11.40310473,"dec":-72.25660192},
+{"mag":4.81,"ra":11.41016816,"dec":-10.85938276},
+{"mag":4.06,"ra":11.41471755,"dec":-17.68401748},
+{"mag":5.8,"ra":11.41638522,"dec":11.43030968},
+{"mag":5.21,"ra":11.42486971,"dec":-36.06310533},
+{"mag":5.87,"ra":11.42586889,"dec":-37.74754766},
+{"mag":5.58,"ra":11.42679428,"dec":16.45655059},
+{"mag":5.18,"ra":11.42876782,"dec":-63.97231572},
+{"mag":5.73,"ra":11.43255118,"dec":55.85034058},
+{"mag":5.22,"ra":11.44317623,"dec":-61.1151713},
+{"mag":5.8,"ra":11.44647356,"dec":-53.15995577},
+{"mag":5.93,"ra":11.45265979,"dec":-12.3568071},
+{"mag":4.95,"ra":11.46561941,"dec":2.85629071},
+{"mag":5.14,"ra":11.47641866,"dec":-42.67421801},
+{"mag":5.3,"ra":11.48448958,"dec":39.33694235},
+{"mag":5.83,"ra":11.48463987,"dec":61.77778557},
+{"mag":5.77,"ra":11.49406884,"dec":-24.46405831},
+{"mag":5.74,"ra":11.4949618,"dec":15.4133855},
+{"mag":4.77,"ra":11.50524494,"dec":-3.00345887},
+{"mag":5.54,"ra":11.50807802,"dec":18.40973855},
+{"mag":5.94,"ra":11.50865853,"dec":43.17304329},
+{"mag":3.82,"ra":11.52341346,"dec":69.33112161},
+{"mag":5.07,"ra":11.52946476,"dec":-59.44206384},
+{"mag":5.12,"ra":11.53022427,"dec":-59.51564932},
+{"mag":4.93,"ra":11.53789374,"dec":-29.26137351},
+{"mag":5.89,"ra":11.5388879,"dec":-66.9618349},
+{"mag":5.46,"ra":11.53909916,"dec":61.08275166},
+{"mag":5.94,"ra":11.5465392,"dec":-7.8275244},
+{"mag":5.64,"ra":11.5467053,"dec":-40.4363361},
+{"mag":5.13,"ra":11.54837498,"dec":-31.08723547},
+{"mag":3.54,"ra":11.55007195,"dec":-31.85752405},
+{"mag":5.39,"ra":11.56035106,"dec":-40.58670322},
+{"mag":5.76,"ra":11.57279333,"dec":3.060415},
+{"mag":5.96,"ra":11.5749869,"dec":-32.83334205},
+{"mag":5.95,"ra":11.57847134,"dec":16.79691629},
+{"mag":4.62,"ra":11.57936442,"dec":-54.26413167},
+{"mag":5.5,"ra":11.58250124,"dec":-49.1369474},
+{"mag":5.63,"ra":11.58469362,"dec":54.78537508},
+{"mag":5.64,"ra":11.58704383,"dec":-47.37256106},
+{"mag":3.11,"ra":11.59636896,"dec":-63.01982488},
+{"mag":5.26,"ra":11.59876549,"dec":-47.64152017},
+{"mag":5.19,"ra":11.60072662,"dec":69.32325973},
+{"mag":5.8,"ra":11.60498358,"dec":27.78130214},
+{"mag":5.84,"ra":11.60621692,"dec":-61.05243721},
+{"mag":5.71,"ra":11.60970121,"dec":-33.56997476},
+{"mag":4.7,"ra":11.61137458,"dec":-9.80225368},
+{"mag":4.3,"ra":11.61581384,"dec":-0.82385424},
+{"mag":5.14,"ra":11.61688935,"dec":-61.28344643},
+{"mag":5.64,"ra":11.6210951,"dec":-75.89654092},
+{"mag":5.46,"ra":11.62612505,"dec":-47.74737759},
+{"mag":5.94,"ra":11.63014089,"dec":-67.62035361},
+{"mag":5.15,"ra":11.63538108,"dec":-61.82655484},
+{"mag":5.56,"ra":11.63907991,"dec":43.62551361},
+{"mag":5.24,"ra":11.64100267,"dec":8.13428325},
+{"mag":5.48,"ra":11.64443251,"dec":-13.20224958},
+{"mag":5.01,"ra":11.65823138,"dec":-65.3977489},
+{"mag":4.7,"ra":11.67022789,"dec":-34.7446553},
+{"mag":5.95,"ra":11.67847006,"dec":-53.96854858},
+{"mag":5.26,"ra":11.67975154,"dec":21.35284143},
+{"mag":4.93,"ra":11.68157018,"dec":-62.09010401},
+{"mag":5.31,"ra":11.68417365,"dec":34.20256022},
+{"mag":5.54,"ra":11.68884887,"dec":-43.09567719},
+{"mag":5.73,"ra":11.69291682,"dec":31.7459835},
+{"mag":5.2,"ra":11.69554232,"dec":-32.49932237},
+{"mag":5.32,"ra":11.70789664,"dec":66.7448085},
+{"mag":5.98,"ra":11.72422255,"dec":-37.19010227},
+{"mag":5.0,"ra":11.72533328,"dec":-62.48939856},
+{"mag":4.71,"ra":11.74604415,"dec":-18.35061467},
+{"mag":4.84,"ra":11.75472355,"dec":8.25817475},
+{"mag":3.63,"ra":11.76015759,"dec":-66.72884344},
+{"mag":5.28,"ra":11.76222323,"dec":-45.69014545},
+{"mag":4.04,"ra":11.76432515,"dec":6.52981394},
+{"mag":3.69,"ra":11.76753725,"dec":47.77933701},
+{"mag":4.11,"ra":11.77523583,"dec":-61.17835907},
+{"mag":4.89,"ra":11.77562416,"dec":-40.50133452},
+{"mag":5.27,"ra":11.7821135,"dec":55.62826771},
+{"mag":5.42,"ra":11.78865806,"dec":-57.69654711},
+{"mag":5.31,"ra":11.79859215,"dec":8.24586534},
+{"mag":4.5,"ra":11.7997851,"dec":20.21894121},
+{"mag":4.75,"ra":11.80402484,"dec":-66.81487085},
+{"mag":5.9,"ra":11.81076962,"dec":14.28419729},
+{"mag":5.1,"ra":11.81252928,"dec":-26.74975369},
+{"mag":2.14,"ra":11.81774398,"dec":14.57233687},
+{"mag":4.3,"ra":11.82808001,"dec":-63.78848906},
+{"mag":5.73,"ra":11.82827752,"dec":34.9317394},
+{"mag":4.98,"ra":11.8323964,"dec":-70.2257858},
+{"mag":5.68,"ra":11.84091245,"dec":-62.6493833},
+{"mag":3.59,"ra":11.8448017,"dec":1.76537705},
+{"mag":5.62,"ra":11.85061967,"dec":-5.333334},
+{"mag":4.47,"ra":11.852431,"dec":-45.1734495},
+{"mag":5.85,"ra":11.86156022,"dec":-30.83409571},
+{"mag":4.89,"ra":11.86424246,"dec":-65.20589445},
+{"mag":5.56,"ra":11.86955386,"dec":-56.98782681},
+{"mag":4.29,"ra":11.88182257,"dec":-33.90813014},
+{"mag":2.41,"ra":11.89715035,"dec":53.69473296},
+{"mag":5.26,"ra":11.91180771,"dec":-25.71406632},
+{"mag":5.89,"ra":11.91667299,"dec":-63.27917897},
+{"mag":5.58,"ra":11.91754209,"dec":8.44390534},
+{"mag":5.93,"ra":11.92781364,"dec":-28.47703681},
+{"mag":5.53,"ra":11.92792432,"dec":15.64680922},
+{"mag":5.83,"ra":11.93289102,"dec":56.59856271},
+{"mag":5.17,"ra":11.93360653,"dec":-17.15080863},
+{"mag":5.59,"ra":11.9611217,"dec":-62.44873578},
+{"mag":5.44,"ra":11.97090199,"dec":-56.31731449},
+{"mag":5.59,"ra":11.97990798,"dec":-64.33955671},
+{"mag":5.95,"ra":11.98820492,"dec":33.16702114},
+{"mag":4.88,"ra":11.99380313,"dec":-78.22181833},
+{"mag":5.36,"ra":11.99914546,"dec":3.65521716},
+{"mag":5.54,"ra":12.01232423,"dec":-10.44483921},
+{"mag":5.28,"ra":12.01421389,"dec":-19.65899848},
+{"mag":4.65,"ra":12.01455285,"dec":6.61439464},
+{"mag":5.59,"ra":12.02764788,"dec":36.04227697},
+{"mag":5.22,"ra":12.0352953,"dec":43.04546506},
+{"mag":5.89,"ra":12.0438213,"dec":-69.19227106},
+{"mag":4.32,"ra":12.05047198,"dec":-63.31294495},
+{"mag":5.15,"ra":12.06092076,"dec":-42.43378714},
+{"mag":5.89,"ra":12.07127112,"dec":21.45916332},
+{"mag":4.72,"ra":12.07201048,"dec":-63.16571094},
+{"mag":5.34,"ra":12.07748522,"dec":-68.32889673},
+{"mag":5.04,"ra":12.0796288,"dec":-76.51917475},
+{"mag":5.95,"ra":12.08256836,"dec":-60.96823848},
+{"mag":4.12,"ra":12.08685266,"dec":8.73284563},
+{"mag":5.78,"ra":12.08742742,"dec":76.90595813},
+{"mag":5.95,"ra":12.10641217,"dec":-65.70942594},
+{"mag":4.14,"ra":12.11468134,"dec":-64.61363898},
+{"mag":5.17,"ra":12.13058005,"dec":-75.36706513},
+{"mag":4.46,"ra":12.13479341,"dec":-50.66125439},
+{"mag":5.34,"ra":12.13742491,"dec":-48.69247036},
+{"mag":2.58,"ra":12.13931767,"dec":-50.72240999},
+{"mag":4.02,"ra":12.14020907,"dec":-24.72877993},
+{"mag":5.75,"ra":12.14828849,"dec":-44.32588609},
+{"mag":5.51,"ra":12.14849946,"dec":-41.23158452},
+{"mag":5.95,"ra":12.16146813,"dec":1.89832789},
+{"mag":5.72,"ra":12.16764211,"dec":5.80696343},
+{"mag":3.02,"ra":12.16875718,"dec":-22.61979211},
+{"mag":5.45,"ra":12.18441142,"dec":-23.60237239},
+{"mag":3.97,"ra":12.19420872,"dec":-52.36841559},
+{"mag":5.66,"ra":12.19755584,"dec":25.87035539},
+{"mag":5.6,"ra":12.20258311,"dec":20.54210573},
+{"mag":5.14,"ra":12.20330922,"dec":77.61619242},
+{"mag":5.91,"ra":12.20610735,"dec":-62.95077296},
+{"mag":5.77,"ra":12.22362736,"dec":-38.92915939},
+{"mag":5.85,"ra":12.22388735,"dec":10.26236039},
+{"mag":5.31,"ra":12.2340908,"dec":-45.72393011},
+{"mag":5.82,"ra":12.24988397,"dec":-20.84423329},
+{"mag":5.72,"ra":12.25237046,"dec":70.20007671},
+{"mag":2.79,"ra":12.25243248,"dec":-58.74890179},
+{"mag":3.32,"ra":12.25706919,"dec":57.03259792},
+{"mag":2.58,"ra":12.26346329,"dec":-17.5419837},
+{"mag":5.09,"ra":12.26673192,"dec":14.89914477},
+{"mag":5.69,"ra":12.2687601,"dec":40.66025851},
+{"mag":4.93,"ra":12.27237644,"dec":23.94542332},
+{"mag":4.99,"ra":12.27504856,"dec":33.06179861},
+{"mag":5.8,"ra":12.29154507,"dec":53.19144123},
+{"mag":5.71,"ra":12.29183258,"dec":28.93710321},
+{"mag":4.06,"ra":12.29295453,"dec":-67.96067161},
+{"mag":4.24,"ra":12.30581775,"dec":-79.31226899},
+{"mag":4.06,"ra":12.30730353,"dec":-64.00304555},
+{"mag":5.9,"ra":12.3111939,"dec":-0.7871448},
+{"mag":5.47,"ra":12.313907,"dec":75.1605502},
+{"mag":5.01,"ra":12.31661903,"dec":-55.14297519},
+{"mag":5.28,"ra":12.33020086,"dec":48.98413192},
+{"mag":3.89,"ra":12.33177539,"dec":-0.66674709},
+{"mag":5.94,"ra":12.33634291,"dec":-22.17562676},
+{"mag":5.52,"ra":12.33881113,"dec":26.6197509},
+{"mag":4.97,"ra":12.33920904,"dec":3.31272688},
+{"mag":5.2,"ra":12.3426974,"dec":-22.21583387},
+{"mag":4.72,"ra":12.34530365,"dec":17.79265307},
+{"mag":5.54,"ra":12.34745283,"dec":57.86428953},
+{"mag":5.14,"ra":12.34880994,"dec":-13.56574902},
+{"mag":3.59,"ra":12.35605869,"dec":-60.40136988},
+{"mag":5.91,"ra":12.36595516,"dec":-56.3743836},
+{"mag":5.15,"ra":12.36871851,"dec":-67.52209279},
+{"mag":5.73,"ra":12.37000954,"dec":-68.30719873},
+{"mag":4.78,"ra":12.37508865,"dec":25.84618178},
+{"mag":5.38,"ra":12.38040898,"dec":-57.67610097},
+{"mag":5.66,"ra":12.38933327,"dec":-24.84062116},
+{"mag":5.32,"ra":12.3931804,"dec":-35.41265923},
+{"mag":5.79,"ra":12.39577394,"dec":-38.91135056},
+{"mag":4.76,"ra":12.40041175,"dec":51.56222925},
+{"mag":5.17,"ra":12.40514991,"dec":26.09861325},
+{"mag":5.82,"ra":12.4175621,"dec":56.77785826},
+{"mag":5.95,"ra":12.41994468,"dec":-11.61051268},
+{"mag":5.71,"ra":12.42271218,"dec":-35.18640097},
+{"mag":5.01,"ra":12.43083253,"dec":39.01869867},
+{"mag":4.92,"ra":12.44002048,"dec":27.26826273},
+{"mag":4.82,"ra":12.44216338,"dec":-51.4506115},
+{"mag":0.77,"ra":12.44331705,"dec":-63.09905586},
+{"mag":5.56,"ra":12.44769283,"dec":-32.83004764},
+{"mag":4.35,"ra":12.44897988,"dec":28.26861975},
+{"mag":4.98,"ra":12.44980668,"dec":26.8257216},
+{"mag":5.38,"ra":12.45802117,"dec":-58.99176932},
+{"mag":5.68,"ra":12.45975717,"dec":55.71275225},
+{"mag":3.91,"ra":12.46733655,"dec":-50.2306048},
+{"mag":5.45,"ra":12.47291274,"dec":-39.04113804},
+{"mag":5.29,"ra":12.48186605,"dec":25.91288804},
+{"mag":5.47,"ra":12.49084826,"dec":24.10892077},
+{"mag":5.68,"ra":12.49533988,"dec":20.89618496},
+{"mag":2.94,"ra":12.4977731,"dec":-16.51509397},
+{"mag":5.78,"ra":12.49838726,"dec":-56.52496942},
+{"mag":5.37,"ra":12.49927749,"dec":58.4055266},
+{"mag":5.01,"ra":12.50187813,"dec":69.20126087},
+{"mag":5.63,"ra":12.50485051,"dec":-23.69642033},
+{"mag":5.47,"ra":12.51682448,"dec":24.56718941},
+{"mag":1.59,"ra":12.5194248,"dec":-57.11256922},
+{"mag":5.49,"ra":12.52787358,"dec":-59.42391403},
+{"mag":5.96,"ra":12.53226469,"dec":-63.50589876},
+{"mag":4.3,"ra":12.53457909,"dec":-16.19586556},
+{"mag":5.88,"ra":12.53608197,"dec":-73.00104307},
+{"mag":3.84,"ra":12.54114193,"dec":-72.1329759},
+{"mag":5.74,"ra":12.54335738,"dec":-13.85897407},
+{"mag":3.85,"ra":12.55806736,"dec":69.78820992},
+{"mag":5.58,"ra":12.55951916,"dec":-12.83032829},
+{"mag":5.42,"ra":12.56080683,"dec":33.24766003},
+{"mag":4.24,"ra":12.5625257,"dec":41.35676779},
+{"mag":5.48,"ra":12.56299923,"dec":-9.45207768},
+{"mag":2.65,"ra":12.57312057,"dec":-23.39662306},
+{"mag":5.76,"ra":12.57846015,"dec":-44.67251655},
+{"mag":4.95,"ra":12.57890701,"dec":70.02177318},
+{"mag":4.8,"ra":12.58086605,"dec":22.62918961},
+{"mag":5.03,"ra":12.58548958,"dec":18.37700118},
+{"mag":5.86,"ra":12.58559828,"dec":21.88143144},
+{"mag":5.12,"ra":12.59600404,"dec":-41.02194744},
+{"mag":5.78,"ra":12.60029835,"dec":-39.86944684},
+{"mag":5.88,"ra":12.61315854,"dec":-5.8318511},
+{"mag":5.7,"ra":12.61620946,"dec":17.08957856},
+{"mag":2.69,"ra":12.61974547,"dec":-69.13553358},
+{"mag":5.41,"ra":12.62839626,"dec":-27.13865883},
+{"mag":3.85,"ra":12.62842439,"dec":-48.54128816},
+{"mag":5.68,"ra":12.63957001,"dec":1.85470456},
+{"mag":5.86,"ra":12.65096794,"dec":-30.4223493},
+{"mag":5.49,"ra":12.65204379,"dec":21.06258094},
+{"mag":4.66,"ra":12.65411457,"dec":-7.99550439},
+{"mag":4.63,"ra":12.6646004,"dec":-39.98724188},
+{"mag":5.17,"ra":12.68778427,"dec":-13.01392023},
+{"mag":5.84,"ra":12.68973471,"dec":-46.14572729},
+{"mag":2.2,"ra":12.69200138,"dec":-48.95988553},
+{"mag":2.74,"ra":12.69444503,"dec":-1.44952231},
+{"mag":4.88,"ra":12.69805765,"dec":10.23584294},
+{"mag":4.91,"ra":12.69905466,"dec":-59.68581085},
+{"mag":5.57,"ra":12.69921102,"dec":6.80664416},
+{"mag":4.66,"ra":12.70987809,"dec":-48.81303493},
+{"mag":5.27,"ra":12.71396743,"dec":-63.058616},
+{"mag":5.99,"ra":12.7192256,"dec":-56.17619646},
+{"mag":5.91,"ra":12.72722835,"dec":-1.57681459},
+{"mag":5.46,"ra":12.73348619,"dec":-28.32386102},
+{"mag":5.95,"ra":12.74991006,"dec":39.27857766},
+{"mag":5.42,"ra":12.75217466,"dec":45.44022447},
+{"mag":5.22,"ra":12.76031168,"dec":7.67331477},
+{"mag":4.69,"ra":12.76053228,"dec":-60.98116057},
+{"mag":3.04,"ra":12.77135267,"dec":-68.10809405},
+{"mag":5.65,"ra":12.77288323,"dec":9.54078962},
+{"mag":4.62,"ra":12.77298597,"dec":-56.48877967},
+{"mag":5.12,"ra":12.77743147,"dec":16.57764912},
+{"mag":5.87,"ra":12.77950572,"dec":-33.31541396},
+{"mag":5.88,"ra":12.78859039,"dec":62.78113875},
+{"mag":5.43,"ra":12.79287259,"dec":66.79031573},
+{"mag":1.25,"ra":12.79536635,"dec":-59.68873246},
+{"mag":5.65,"ra":12.80732183,"dec":-27.59723017},
+{"mag":5.83,"ra":12.81092684,"dec":60.31989667},
+{"mag":5.71,"ra":12.81505448,"dec":14.12263297},
+{"mag":5.92,"ra":12.81855312,"dec":83.41779443},
+{"mag":5.38,"ra":12.82050013,"dec":83.41285818},
+{"mag":5.76,"ra":12.82153121,"dec":27.55232611},
+{"mag":5.55,"ra":12.82915265,"dec":-71.98624542},
+{"mag":5.87,"ra":12.8363349,"dec":37.51688446},
+{"mag":4.9,"ra":12.84477415,"dec":-33.99926779},
+{"mag":5.7,"ra":12.84941766,"dec":-52.7873952},
+{"mag":5.71,"ra":12.85499492,"dec":-60.32978611},
+{"mag":4.93,"ra":12.86164661,"dec":27.54073393},
+{"mag":5.99,"ra":12.86581947,"dec":-39.68038459},
+{"mag":5.91,"ra":12.8845178,"dec":-54.9524841},
+{"mag":4.33,"ra":12.88527127,"dec":-48.94325313},
+{"mag":4.89,"ra":12.88826967,"dec":21.24502058},
+{"mag":5.75,"ra":12.8894166,"dec":-60.32848627},
+{"mag":4.25,"ra":12.8905961,"dec":-40.17881857},
+{"mag":5.89,"ra":12.89692318,"dec":-60.37624027},
+{"mag":1.76,"ra":12.9004536,"dec":55.95984301},
+{"mag":4.77,"ra":12.9058817,"dec":-9.53894647},
+{"mag":4.03,"ra":12.90990489,"dec":-57.17789116},
+{"mag":5.08,"ra":12.91025591,"dec":-57.16864387},
+{"mag":4.62,"ra":12.91089445,"dec":-59.14666538},
+{"mag":5.75,"ra":12.91570445,"dec":47.19673771},
+{"mag":5.45,"ra":12.91620771,"dec":-85.12342237},
+{"mag":5.89,"ra":12.91630729,"dec":-44.15140639},
+{"mag":5.46,"ra":12.92207264,"dec":-42.9157015},
+{"mag":5.23,"ra":12.92459864,"dec":65.43854743},
+{"mag":3.39,"ra":12.92680091,"dec":3.39759862},
+{"mag":5.34,"ra":12.93253881,"dec":-56.83580429},
+{"mag":5.61,"ra":12.93350105,"dec":38.31469771},
+{"mag":2.89,"ra":12.9338447,"dec":38.31824617},
+{"mag":5.84,"ra":12.93823391,"dec":54.09948306},
+{"mag":5.93,"ra":12.94214448,"dec":-72.18518249},
+{"mag":5.17,"ra":12.95121681,"dec":-51.19871605},
+{"mag":4.76,"ra":12.98207385,"dec":17.40936063},
+{"mag":5.79,"ra":12.99431817,"dec":-3.81194179},
+{"mag":5.37,"ra":12.99868775,"dec":66.59730755},
+{"mag":4.88,"ra":13.00457929,"dec":30.78503676},
+{"mag":5.99,"ra":13.00998847,"dec":-3.3686079},
+{"mag":4.93,"ra":13.01210715,"dec":56.36633134},
+{"mag":5.97,"ra":13.01933893,"dec":17.1232026},
+{"mag":2.85,"ra":13.03632237,"dec":10.95910186},
+{"mag":3.61,"ra":13.03771597,"dec":-71.54879865},
+{"mag":5.93,"ra":13.05148901,"dec":-71.47572327},
+{"mag":4.83,"ra":13.05926331,"dec":-49.52723627},
+{"mag":5.58,"ra":13.06278521,"dec":-20.58350964},
+{"mag":5.2,"ra":13.095684,"dec":35.79885169},
+{"mag":5.64,"ra":13.09785537,"dec":45.26848988},
+{"mag":4.71,"ra":13.10464732,"dec":-48.46325358},
+{"mag":5.53,"ra":13.10627337,"dec":22.61629063},
+{"mag":5.59,"ra":13.10973538,"dec":-41.58840727},
+{"mag":5.63,"ra":13.11506365,"dec":-35.86182329},
+{"mag":4.27,"ra":13.11518417,"dec":-49.90621586},
+{"mag":4.8,"ra":13.11964107,"dec":27.62490672},
+{"mag":5.98,"ra":13.12341946,"dec":-59.86049011},
+{"mag":5.7,"ra":13.12731124,"dec":-53.45971466},
+{"mag":5.15,"ra":13.13161191,"dec":-10.74038528},
+{"mag":5.44,"ra":13.13532192,"dec":-65.30601741},
+{"mag":5.57,"ra":13.14235778,"dec":-8.98422912},
+{"mag":4.94,"ra":13.15091194,"dec":-23.11797275},
+{"mag":5.79,"ra":13.15345066,"dec":10.02246786},
+{"mag":5.95,"ra":13.16258009,"dec":-10.32930884},
+{"mag":5.91,"ra":13.16330208,"dec":16.8486489},
+{"mag":4.38,"ra":13.16583667,"dec":-5.53892987},
+{"mag":4.32,"ra":13.1665415,"dec":17.52911621},
+{"mag":5.91,"ra":13.16757463,"dec":38.49887224},
+{"mag":5.78,"ra":13.18581695,"dec":-42.23282785},
+{"mag":5.24,"ra":13.18980764,"dec":-43.36850529},
+{"mag":5.92,"ra":13.19760597,"dec":-69.94201974},
+{"mag":4.23,"ra":13.19803407,"dec":27.87603769},
+{"mag":4.85,"ra":13.20096299,"dec":-37.80313606},
+{"mag":5.04,"ra":13.20096794,"dec":-16.1979034},
+{"mag":4.58,"ra":13.20489702,"dec":-59.92053651},
+{"mag":5.76,"ra":13.20915319,"dec":11.55617035},
+{"mag":5.91,"ra":13.21354619,"dec":-66.22676607},
+{"mag":5.9,"ra":13.22316183,"dec":-50.6997859},
+{"mag":4.94,"ra":13.22860596,"dec":40.15284766},
+{"mag":5.31,"ra":13.23638046,"dec":-19.93133468},
+{"mag":5.91,"ra":13.23670825,"dec":-58.68390821},
+{"mag":4.9,"ra":13.23761891,"dec":-59.10285946},
+{"mag":5.84,"ra":13.23815458,"dec":-78.44744492},
+{"mag":5.64,"ra":13.24201191,"dec":11.33178469},
+{"mag":5.84,"ra":13.24537866,"dec":-48.95680509},
+{"mag":4.79,"ra":13.25416605,"dec":-67.8945633},
+{"mag":5.77,"ra":13.25890141,"dec":40.8551724},
+{"mag":5.21,"ra":13.26627284,"dec":-19.94282246},
+{"mag":5.19,"ra":13.2796426,"dec":9.423693},
+{"mag":5.1,"ra":13.28141977,"dec":-31.5060767},
+{"mag":4.86,"ra":13.28695416,"dec":-66.78342263},
+{"mag":5.82,"ra":13.28720083,"dec":-43.97944198},
+{"mag":5.33,"ra":13.28767315,"dec":13.67564684},
+{"mag":4.72,"ra":13.2923992,"dec":40.57256275},
+{"mag":4.78,"ra":13.29341302,"dec":5.46984502},
+{"mag":5.14,"ra":13.30403901,"dec":49.68201519},
+{"mag":4.74,"ra":13.30693666,"dec":-18.30861062},
+{"mag":5.81,"ra":13.30769651,"dec":34.09829261},
+{"mag":2.99,"ra":13.31534816,"dec":-23.17141246},
+{"mag":5.6,"ra":13.33860991,"dec":40.15055594},
+{"mag":2.75,"ra":13.34335154,"dec":-36.71208109},
+{"mag":5.47,"ra":13.34384845,"dec":-52.74778497},
+{"mag":5.76,"ra":13.3493786,"dec":-46.88005836},
+{"mag":5.69,"ra":13.36157742,"dec":2.0873706},
+{"mag":5.89,"ra":13.36936936,"dec":5.15485074},
+{"mag":5.81,"ra":13.37119161,"dec":-52.18295165},
+{"mag":4.52,"ra":13.37721659,"dec":-60.98835608},
+{"mag":5.36,"ra":13.38365147,"dec":-17.73520402},
+{"mag":5.88,"ra":13.38858478,"dec":-4.92438824},
+{"mag":2.23,"ra":13.39872773,"dec":54.92541525},
+{"mag":4.52,"ra":13.40012315,"dec":-64.53561699},
+{"mag":5.76,"ra":13.40920456,"dec":-5.16392212},
+{"mag":5.75,"ra":13.41852356,"dec":23.85443816},
+{"mag":5.04,"ra":13.41871122,"dec":-74.88749735},
+{"mag":0.98,"ra":13.41989015,"dec":-11.16124491},
+{"mag":3.99,"ra":13.42039322,"dec":54.98799884},
+{"mag":5.32,"ra":13.42059326,"dec":-64.48509219},
+{"mag":5.65,"ra":13.43066633,"dec":-70.62725069},
+{"mag":5.11,"ra":13.43545527,"dec":-39.75496493},
+{"mag":5.82,"ra":13.43556201,"dec":72.39149824},
+{"mag":5.97,"ra":13.43652245,"dec":-1.19248368},
+{"mag":5.88,"ra":13.43793803,"dec":46.0281037},
+{"mag":5.27,"ra":13.4453457,"dec":-12.70761258},
+{"mag":5.69,"ra":13.4489233,"dec":-41.49756484},
+{"mag":5.74,"ra":13.44922768,"dec":78.64379561},
+{"mag":4.76,"ra":13.45756613,"dec":-15.97363075},
+{"mag":4.97,"ra":13.47387511,"dec":13.78018777},
+{"mag":5.4,"ra":13.47421614,"dec":59.94570301},
+{"mag":5.65,"ra":13.48695451,"dec":10.81839609},
+{"mag":5.04,"ra":13.49034874,"dec":-51.16511504},
+{"mag":3.9,"ra":13.5174079,"dec":-39.40727983},
+{"mag":4.68,"ra":13.53276278,"dec":-6.25571065},
+{"mag":5.69,"ra":13.54332279,"dec":-28.6927144},
+{"mag":5.52,"ra":13.54769124,"dec":-15.36301232},
+{"mag":5.21,"ra":13.54946976,"dec":-10.16490767},
+{"mag":5.6,"ra":13.5687014,"dec":55.34844976},
+{"mag":4.92,"ra":13.56886258,"dec":3.65902506},
+{"mag":4.68,"ra":13.5742704,"dec":49.01590606},
+{"mag":5.92,"ra":13.57791069,"dec":-13.21430591},
+{"mag":3.38,"ra":13.5782652,"dec":-0.59593821},
+{"mag":4.91,"ra":13.57992952,"dec":37.18243871},
+{"mag":5.7,"ra":13.59202418,"dec":-5.39639184},
+{"mag":5.73,"ra":13.6134748,"dec":-26.49523551},
+{"mag":5.72,"ra":13.61641657,"dec":24.61330297},
+{"mag":5.96,"ra":13.61834776,"dec":-44.14316883},
+{"mag":5.5,"ra":13.61973731,"dec":71.2422665},
+{"mag":5.63,"ra":13.62005581,"dec":-61.69157197},
+{"mag":5.91,"ra":13.62319372,"dec":-46.42784035},
+{"mag":4.82,"ra":13.62436025,"dec":36.29484073},
+{"mag":5.81,"ra":13.64503498,"dec":-29.56067984},
+{"mag":5.46,"ra":13.65849433,"dec":52.92107136},
+{"mag":5.57,"ra":13.65963452,"dec":10.74630126},
+{"mag":5.61,"ra":13.66349605,"dec":-40.05157491},
+{"mag":2.29,"ra":13.66479797,"dec":-53.46636269},
+{"mag":5.74,"ra":13.66663818,"dec":-49.95000116},
+{"mag":5.79,"ra":13.66966724,"dec":-64.57655426},
+{"mag":5.73,"ra":13.67791615,"dec":19.955663},
+{"mag":4.63,"ra":13.67897014,"dec":54.68166149},
+{"mag":5.56,"ra":13.68227091,"dec":-85.78599228},
+{"mag":5.63,"ra":13.68398813,"dec":22.49583157},
+{"mag":5.85,"ra":13.69161582,"dec":64.82243969},
+{"mag":5.03,"ra":13.69356408,"dec":-8.70308218},
+{"mag":4.99,"ra":13.69578188,"dec":-54.55936543},
+{"mag":5.38,"ra":13.70031162,"dec":-58.78704974},
+{"mag":5.92,"ra":13.70637328,"dec":82.75251097},
+{"mag":5.91,"ra":13.71093999,"dec":78.06432575},
+{"mag":5.98,"ra":13.7120614,"dec":34.98899453},
+{"mag":5.96,"ra":13.71529519,"dec":-41.4009514},
+{"mag":5.35,"ra":13.71774561,"dec":3.53807968},
+{"mag":5.96,"ra":13.72780442,"dec":-42.06751103},
+{"mag":5.55,"ra":13.74161645,"dec":-16.17905873},
+{"mag":5.81,"ra":13.76026046,"dec":-26.11598461},
+{"mag":4.23,"ra":13.76154628,"dec":-33.04336606},
+{"mag":5.5,"ra":13.76564741,"dec":-12.42654721},
+{"mag":5.88,"ra":13.77045374,"dec":41.08884885},
+{"mag":5.92,"ra":13.7719718,"dec":38.5036561},
+{"mag":5.68,"ra":13.77657648,"dec":54.43269033},
+{"mag":4.64,"ra":13.77760234,"dec":-51.43269771},
+{"mag":5.97,"ra":13.77870415,"dec":25.70238073},
+{"mag":5.15,"ra":13.78232259,"dec":-36.25190473},
+{"mag":5.51,"ra":13.78329856,"dec":38.54274988},
+{"mag":4.5,"ra":13.78778795,"dec":17.45677436},
+{"mag":5.41,"ra":13.79037627,"dec":-17.85976354},
+{"mag":5.92,"ra":13.79099578,"dec":-50.24932136},
+{"mag":1.85,"ra":13.79237392,"dec":49.31330288},
+{"mag":5.46,"ra":13.79407494,"dec":-50.32066712},
+{"mag":5.61,"ra":13.81076082,"dec":31.19011458},
+{"mag":4.19,"ra":13.82409757,"dec":-34.45063035},
+{"mag":4.05,"ra":13.82463829,"dec":15.79780583},
+{"mag":3.41,"ra":13.82508261,"dec":-41.68765971},
+{"mag":3.47,"ra":13.82694662,"dec":-42.47368506},
+{"mag":4.92,"ra":13.82856109,"dec":21.26406422},
+{"mag":5.97,"ra":13.82928567,"dec":61.48954562},
+{"mag":4.96,"ra":13.83120679,"dec":-18.13407618},
+{"mag":5.89,"ra":13.85255794,"dec":34.66453},
+{"mag":4.58,"ra":13.85720488,"dec":64.72328281},
+{"mag":5.77,"ra":13.86311953,"dec":-46.89863029},
+{"mag":5.73,"ra":13.86317322,"dec":-69.40124669},
+{"mag":4.76,"ra":13.86319154,"dec":34.44431774},
+{"mag":4.32,"ra":13.86378478,"dec":-32.99401625},
+{"mag":5.26,"ra":13.86802776,"dec":-52.81146355},
+{"mag":5.91,"ra":13.88621192,"dec":28.64806212},
+{"mag":4.75,"ra":13.88681897,"dec":-31.92758624},
+{"mag":5.71,"ra":13.88693089,"dec":17.93285548},
+{"mag":5.53,"ra":13.89245005,"dec":-35.66419416},
+{"mag":5.87,"ra":13.89530845,"dec":-53.37328052},
+{"mag":5.7,"ra":13.89751174,"dec":53.7286921},
+{"mag":5.83,"ra":13.89923525,"dec":-47.12815361},
+{"mag":2.68,"ra":13.91142116,"dec":18.39858742},
+{"mag":5.16,"ra":13.91172123,"dec":-1.50307142},
+{"mag":5.74,"ra":13.91364915,"dec":-67.6520644},
+{"mag":5.66,"ra":13.92004711,"dec":-52.16076937},
+{"mag":2.55,"ra":13.92567635,"dec":-47.28826634},
+{"mag":5.95,"ra":13.92749694,"dec":-82.66613365},
+{"mag":5.82,"ra":13.93885926,"dec":-46.59272882},
+{"mag":5.9,"ra":13.94108149,"dec":1.05054828},
+{"mag":5.02,"ra":13.94282293,"dec":27.49219844},
+{"mag":4.71,"ra":13.96081578,"dec":-63.68661603},
+{"mag":3.83,"ra":13.97119018,"dec":-42.10070526},
+{"mag":5.2,"ra":13.97532724,"dec":-24.97217754},
+{"mag":5.76,"ra":13.97748021,"dec":21.69632104},
+{"mag":3.87,"ra":13.97799204,"dec":-44.8035314},
+{"mag":5.92,"ra":13.98818241,"dec":-50.36960607},
+{"mag":5.77,"ra":14.00006836,"dec":-25.01017978},
+{"mag":5.96,"ra":14.01461513,"dec":-66.26885149},
+{"mag":5.98,"ra":14.02233604,"dec":8.89490924},
+{"mag":4.23,"ra":14.02743976,"dec":1.54458338},
+{"mag":4.34,"ra":14.02874776,"dec":-45.60336989},
+{"mag":5.47,"ra":14.03966743,"dec":-27.42976294},
+{"mag":5.93,"ra":14.05738195,"dec":-56.21338128},
+{"mag":0.61,"ra":14.06373459,"dec":-60.3729784},
+{"mag":3.67,"ra":14.07317389,"dec":64.37580873},
+{"mag":5.69,"ra":14.08891702,"dec":-76.79667632},
+{"mag":4.36,"ra":14.10077389,"dec":-41.17958035},
+{"mag":3.25,"ra":14.10618582,"dec":-26.68201883},
+{"mag":2.06,"ra":14.11147907,"dec":-36.36869575},
+{"mag":5.46,"ra":14.11191847,"dec":-9.31352509},
+{"mag":5.13,"ra":14.13215181,"dec":43.8545248},
+{"mag":5.26,"ra":14.13815445,"dec":49.4580206},
+{"mag":4.8,"ra":14.1475025,"dec":77.54743312},
+{"mag":5.96,"ra":14.15973955,"dec":-51.50464539},
+{"mag":4.74,"ra":14.16526573,"dec":-53.43872584},
+{"mag":4.82,"ra":14.17331901,"dec":25.09182293},
+{"mag":4.93,"ra":14.18068985,"dec":-16.30200362},
+{"mag":5.18,"ra":14.20112597,"dec":69.43266873},
+{"mag":4.99,"ra":14.20439733,"dec":2.40949613},
+{"mag":5.07,"ra":14.21278697,"dec":-27.26110002},
+{"mag":4.18,"ra":14.21492805,"dec":-10.274044},
+{"mag":5.53,"ra":14.22122796,"dec":-53.66565135},
+{"mag":4.53,"ra":14.2247083,"dec":51.78999066},
+{"mag":5.89,"ra":14.2279636,"dec":-0.84512445},
+{"mag":5.53,"ra":14.23481438,"dec":12.95957667},
+{"mag":5.61,"ra":14.24521171,"dec":-41.83744813},
+{"mag":5.29,"ra":14.24746181,"dec":10.1010097},
+{"mag":5.03,"ra":14.24921219,"dec":-57.08607539},
+{"mag":5.53,"ra":14.25669806,"dec":-18.20066197},
+{"mag":-0.05,"ra":14.2612076,"dec":19.18726997},
+{"mag":4.07,"ra":14.26691247,"dec":-5.99952622},
+{"mag":4.75,"ra":14.26946375,"dec":51.36701398},
+{"mag":4.18,"ra":14.27310454,"dec":46.08791894},
+{"mag":5.72,"ra":14.27742389,"dec":-66.58788092},
+{"mag":5.84,"ra":14.29123406,"dec":15.26336094},
+{"mag":4.8,"ra":14.29994891,"dec":35.50947085},
+{"mag":4.89,"ra":14.30388069,"dec":-81.00760147},
+{"mag":5.86,"ra":14.31063784,"dec":-18.71588164},
+{"mag":5.87,"ra":14.31697945,"dec":-25.81631724},
+{"mag":4.52,"ra":14.31850051,"dec":-13.37116634},
+{"mag":5.41,"ra":14.32117135,"dec":13.00437724},
+{"mag":5.93,"ra":14.3233097,"dec":-37.00280675},
+{"mag":3.55,"ra":14.32339798,"dec":-46.05808391},
+{"mag":5.14,"ra":14.32570817,"dec":-2.26534352},
+{"mag":4.84,"ra":14.32925578,"dec":16.30680118},
+{"mag":5.22,"ra":14.33102882,"dec":-61.27275714},
+{"mag":5.55,"ra":14.3360304,"dec":-43.05886202},
+{"mag":4.3,"ra":14.33876465,"dec":-56.38647906},
+{"mag":4.05,"ra":14.34263313,"dec":-37.88526711},
+{"mag":4.78,"ra":14.34515304,"dec":-45.1868814},
+{"mag":5.57,"ra":14.37214929,"dec":-34.78679152},
+{"mag":5.06,"ra":14.37311027,"dec":-80.108911},
+{"mag":4.76,"ra":14.37697832,"dec":-58.45915834},
+{"mag":4.41,"ra":14.38396035,"dec":-39.51176599},
+{"mag":4.78,"ra":14.38497437,"dec":-27.75373395},
+{"mag":4.86,"ra":14.38965001,"dec":8.44664037},
+{"mag":5.99,"ra":14.3968439,"dec":-53.17620992},
+{"mag":5.94,"ra":14.40024451,"dec":8.24400431},
+{"mag":5.1,"ra":14.40316398,"dec":5.82011481},
+{"mag":5.34,"ra":14.41351683,"dec":-24.80626639},
+{"mag":5.56,"ra":14.41842753,"dec":-68.19532385},
+{"mag":4.04,"ra":14.42000537,"dec":51.85171354},
+{"mag":4.56,"ra":14.43562084,"dec":-45.22138996},
+{"mag":4.33,"ra":14.43633376,"dec":-45.37926095},
+{"mag":5.4,"ra":14.44094674,"dec":19.2268349},
+{"mag":4.31,"ra":14.44881687,"dec":-83.66785308},
+{"mag":5.87,"ra":14.45197589,"dec":-65.82161161},
+{"mag":5.83,"ra":14.45341651,"dec":-46.1340642},
+{"mag":4.25,"ra":14.45875625,"dec":75.69593921},
+{"mag":4.97,"ra":14.46956759,"dec":-29.49157976},
+{"mag":4.81,"ra":14.4700612,"dec":-2.22795009},
+{"mag":5.58,"ra":14.47724667,"dec":49.84496418},
+{"mag":5.42,"ra":14.47825852,"dec":-6.90041401},
+{"mag":5.96,"ra":14.49736377,"dec":0.82891135},
+{"mag":5.51,"ra":14.50240559,"dec":-45.32128792},
+{"mag":5.38,"ra":14.50583129,"dec":-49.51892657},
+{"mag":5.99,"ra":14.51967667,"dec":-38.86977705},
+{"mag":5.84,"ra":14.52121835,"dec":-67.71705401},
+{"mag":3.57,"ra":14.53051606,"dec":30.37114497},
+{"mag":3.04,"ra":14.53465494,"dec":38.30788348},
+{"mag":5.74,"ra":14.54192493,"dec":55.3980457},
+{"mag":5.91,"ra":14.54239498,"dec":22.25996072},
+{"mag":4.44,"ra":14.54363429,"dec":-50.45712132},
+{"mag":5.86,"ra":14.55832505,"dec":-52.67948076},
+{"mag":5.86,"ra":14.55901965,"dec":-54.9986156},
+{"mag":5.74,"ra":14.57768378,"dec":49.36823171},
+{"mag":4.47,"ra":14.57796958,"dec":29.74480735},
+{"mag":2.33,"ra":14.5917921,"dec":-42.15774562},
+{"mag":5.88,"ra":14.59208274,"dec":-41.51738017},
+{"mag":5.55,"ra":14.60529355,"dec":-46.2454913},
+{"mag":5.74,"ra":14.61226405,"dec":-40.21152639},
+{"mag":5.39,"ra":14.62226805,"dec":-46.13341306},
+{"mag":4.05,"ra":14.63145864,"dec":-49.42575765},
+{"mag":5.74,"ra":14.6368533,"dec":43.64205288},
+{"mag":5.9,"ra":14.63722366,"dec":18.29853624},
+{"mag":5.83,"ra":14.63755697,"dec":54.02338576},
+{"mag":5.39,"ra":14.64730048,"dec":44.40454503},
+{"mag":1.35,"ra":14.66094188,"dec":-60.83947139},
+{"mag":-0.01,"ra":14.66136068,"dec":-60.83514707},
+{"mag":5.93,"ra":14.67843344,"dec":13.53436103},
+{"mag":4.49,"ra":14.67876693,"dec":16.4183013},
+{"mag":5.67,"ra":14.68372597,"dec":-36.1348433},
+{"mag":3.78,"ra":14.68581121,"dec":13.72833113},
+{"mag":4.86,"ra":14.69409903,"dec":8.16175611},
+{"mag":5.55,"ra":14.69544875,"dec":11.66093526},
+{"mag":2.3,"ra":14.69882606,"dec":-47.38814127},
+{"mag":4.01,"ra":14.69933688,"dec":-37.79342394},
+{"mag":3.18,"ra":14.70852362,"dec":-64.97456957},
+{"mag":3.87,"ra":14.71765618,"dec":-5.6574291},
+{"mag":5.7,"ra":14.72043489,"dec":-24.99773099},
+{"mag":4.8,"ra":14.72371441,"dec":26.52789077},
+{"mag":4.06,"ra":14.7276343,"dec":-35.17322549},
+{"mag":5.72,"ra":14.72901237,"dec":40.45920338},
+{"mag":4.92,"ra":14.74977641,"dec":-35.19182069},
+{"mag":2.35,"ra":14.74979191,"dec":27.07417383},
+{"mag":4.6,"ra":14.754027,"dec":16.96440296},
+{"mag":5.36,"ra":14.75479075,"dec":-62.87545275},
+{"mag":5.68,"ra":14.75839681,"dec":0.71729003},
+{"mag":5.15,"ra":14.76671605,"dec":-25.44291557},
+{"mag":5.78,"ra":14.76833257,"dec":15.13174102},
+{"mag":5.8,"ra":14.76854233,"dec":-23.15286204},
+{"mag":3.73,"ra":14.77083106,"dec":1.8929383},
+{"mag":5.74,"ra":14.77472997,"dec":-47.44107999},
+{"mag":5.22,"ra":14.78369739,"dec":-52.38331777},
+{"mag":5.9,"ra":14.78473849,"dec":-38.29043787},
+{"mag":5.61,"ra":14.78959999,"dec":-25.62423321},
+{"mag":5.23,"ra":14.79577255,"dec":-26.0874799},
+{"mag":3.83,"ra":14.79770171,"dec":-79.04471242},
+{"mag":5.76,"ra":14.79932346,"dec":-26.64613329},
+{"mag":5.89,"ra":14.81057143,"dec":-36.63458507},
+{"mag":5.91,"ra":14.81237811,"dec":-66.59353612},
+{"mag":5.76,"ra":14.82185429,"dec":46.11639336},
+{"mag":5.68,"ra":14.82187732,"dec":-24.25146951},
+{"mag":5.32,"ra":14.82196971,"dec":-14.14898587},
+{"mag":5.68,"ra":14.82815597,"dec":48.72056284},
+{"mag":5.8,"ra":14.8328851,"dec":28.61583341},
+{"mag":5.86,"ra":14.83769967,"dec":23.91176538},
+{"mag":4.42,"ra":14.83818519,"dec":-27.96021925},
+{"mag":5.63,"ra":14.83878539,"dec":82.51248701},
+{"mag":5.47,"ra":14.84161173,"dec":37.27181511},
+{"mag":5.15,"ra":14.84479547,"dec":-15.99709226},
+{"mag":2.07,"ra":14.84510983,"dec":74.15547596},
+{"mag":2.75,"ra":14.84799369,"dec":-16.04161047},
+{"mag":4.93,"ra":14.85028336,"dec":-2.29884995},
+{"mag":4.54,"ra":14.85646783,"dec":19.10063329},
+{"mag":5.48,"ra":14.85738186,"dec":59.29365246},
+{"mag":4.32,"ra":14.86064536,"dec":-43.57529383},
+{"mag":5.91,"ra":14.87646396,"dec":-63.80981741},
+{"mag":5.02,"ra":14.88085801,"dec":-37.80311642},
+{"mag":5.59,"ra":14.88709355,"dec":-73.19015457},
+{"mag":5.27,"ra":14.9055934,"dec":-24.64213517},
+{"mag":5.78,"ra":14.90636277,"dec":-11.89833043},
+{"mag":5.85,"ra":14.91053351,"dec":-33.30056091},
+{"mag":5.18,"ra":14.92630767,"dec":-60.11389133},
+{"mag":5.32,"ra":14.92908184,"dec":-33.85578004},
+{"mag":5.9,"ra":14.93701056,"dec":14.44626586},
+{"mag":5.38,"ra":14.93811806,"dec":-52.80956707},
+{"mag":5.63,"ra":14.93970565,"dec":49.62899937},
+{"mag":5.62,"ra":14.94224435,"dec":-47.87914321},
+{"mag":5.08,"ra":14.9455562,"dec":-62.78098762},
+{"mag":5.48,"ra":14.94614085,"dec":-11.4097279},
+{"mag":4.47,"ra":14.95307133,"dec":-4.34608634},
+{"mag":5.72,"ra":14.95324451,"dec":16.38813986},
+{"mag":5.72,"ra":14.95759766,"dec":-21.4112809},
+{"mag":5.51,"ra":14.95922674,"dec":-0.16754803},
+{"mag":4.63,"ra":14.95975531,"dec":65.93238126},
+{"mag":5.37,"ra":14.96476594,"dec":-76.66261622},
+{"mag":2.68,"ra":14.97554279,"dec":-43.13386699},
+{"mag":5.65,"ra":14.97757945,"dec":-27.65729301},
+{"mag":5.88,"ra":14.98156778,"dec":-11.14386422},
+{"mag":3.13,"ra":14.9860275,"dec":-42.10414199},
+{"mag":5.91,"ra":14.98975408,"dec":4.56777277},
+{"mag":5.64,"ra":14.99360305,"dec":39.26523166},
+{"mag":5.92,"ra":15.00314944,"dec":-77.16052523},
+{"mag":4.91,"ra":15.01621879,"dec":-8.51893488},
+{"mag":5.88,"ra":15.02029831,"dec":-38.05831465},
+{"mag":5.52,"ra":15.02216942,"dec":-2.75487208},
+{"mag":5.91,"ra":15.02419703,"dec":60.20442421},
+{"mag":5.71,"ra":15.03025427,"dec":-0.14025867},
+{"mag":5.65,"ra":15.03075119,"dec":-83.22777573},
+{"mag":3.49,"ra":15.03244253,"dec":40.39063671},
+{"mag":5.83,"ra":15.03510528,"dec":-28.06052808},
+{"mag":4.8,"ra":15.03514226,"dec":25.00825646},
+{"mag":4.39,"ra":15.04835277,"dec":2.09127129},
+{"mag":5.45,"ra":15.04980289,"dec":-32.64324605},
+{"mag":5.52,"ra":15.05168988,"dec":35.20577288},
+{"mag":4.83,"ra":15.06324494,"dec":47.65401409},
+{"mag":3.25,"ra":15.06785052,"dec":-25.28185602},
+{"mag":4.52,"ra":15.07412697,"dec":26.94765981},
+{"mag":5.65,"ra":15.07971197,"dec":-83.03826851},
+{"mag":5.16,"ra":15.08001369,"dec":-64.03137307},
+{"mag":3.91,"ra":15.08530713,"dec":-47.05119386},
+{"mag":5.13,"ra":15.08865233,"dec":-41.06723379},
+{"mag":5.59,"ra":15.09052544,"dec":48.15090031},
+{"mag":5.24,"ra":15.1046303,"dec":54.55628697},
+{"mag":5.97,"ra":15.10922579,"dec":-30.91841299},
+{"mag":5.19,"ra":15.11044954,"dec":-16.25676124},
+{"mag":4.93,"ra":15.12165196,"dec":24.86959294},
+{"mag":5.77,"ra":15.12387031,"dec":-49.08863539},
+{"mag":5.75,"ra":15.13670736,"dec":-40.58385604},
+{"mag":5.67,"ra":15.13993898,"dec":26.30118271},
+{"mag":5.82,"ra":15.14321247,"dec":25.10863675},
+{"mag":5.85,"ra":15.14422599,"dec":-42.86786973},
+{"mag":4.07,"ra":15.1473971,"dec":-45.27979406},
+{"mag":5.76,"ra":15.15831094,"dec":-67.08412683},
+{"mag":5.98,"ra":15.16870645,"dec":-38.79246057},
+{"mag":5.75,"ra":15.17184774,"dec":-26.3326008},
+{"mag":5.88,"ra":15.18577604,"dec":-84.78782184},
+{"mag":5.45,"ra":15.18777341,"dec":-55.34601439},
+{"mag":3.88,"ra":15.19893362,"dec":-48.73770212},
+{"mag":5.7,"ra":15.19937917,"dec":-48.74357642},
+{"mag":5.9,"ra":15.20118681,"dec":18.97600352},
+{"mag":4.54,"ra":15.20369782,"dec":-19.79163143},
+{"mag":3.41,"ra":15.20477865,"dec":-52.09907465},
+{"mag":4.83,"ra":15.21377909,"dec":-44.50035965},
+{"mag":5.84,"ra":15.23147826,"dec":-26.19355939},
+{"mag":5.98,"ra":15.23500407,"dec":31.78791816},
+{"mag":5.75,"ra":15.23865773,"dec":-70.07945566},
+{"mag":5.28,"ra":15.24144587,"dec":29.16422593},
+{"mag":4.91,"ra":15.24370163,"dec":-31.51912564},
+{"mag":5.15,"ra":15.24388985,"dec":67.34767598},
+{"mag":5.32,"ra":15.25315736,"dec":4.93935226},
+{"mag":3.46,"ra":15.25836216,"dec":33.31510222},
+{"mag":5.62,"ra":15.26364996,"dec":0.37210753},
+{"mag":5.96,"ra":15.26490596,"dec":-48.07364079},
+{"mag":5.15,"ra":15.26778656,"dec":-41.49114318},
+{"mag":5.52,"ra":15.27306463,"dec":-22.39942083},
+{"mag":5.74,"ra":15.27685957,"dec":-60.9039866},
+{"mag":5.04,"ra":15.28247175,"dec":-60.95724479},
+{"mag":2.61,"ra":15.28346439,"dec":-9.38286694},
+{"mag":5.02,"ra":15.2849671,"dec":71.82387844},
+{"mag":4.07,"ra":15.29193339,"dec":-58.80087882},
+{"mag":4.85,"ra":15.2941355,"dec":-63.61048662},
+{"mag":4.35,"ra":15.29717913,"dec":-30.14866233},
+{"mag":5.68,"ra":15.30680939,"dec":20.57280967},
+{"mag":5.88,"ra":15.30725914,"dec":-0.46123725},
+{"mag":4.27,"ra":15.30890239,"dec":-47.87519201},
+{"mag":5.43,"ra":15.3136519,"dec":-60.49632329},
+{"mag":2.87,"ra":15.31519133,"dec":-68.67946723},
+{"mag":5.59,"ra":15.31566376,"dec":-40.78816875},
+{"mag":5.04,"ra":15.32182775,"dec":1.76665611},
+{"mag":5.65,"ra":15.33476144,"dec":51.95848756},
+{"mag":5.51,"ra":15.33573276,"dec":29.61631109},
+{"mag":3.0,"ra":15.34548589,"dec":71.83397308},
+{"mag":5.35,"ra":15.35056133,"dec":0.71558981},
+{"mag":5.54,"ra":15.3521224,"dec":-5.82482695},
+{"mag":3.22,"ra":15.35620455,"dec":-40.64745946},
+{"mag":3.57,"ra":15.36345457,"dec":-36.26116729},
+{"mag":5.38,"ra":15.36350253,"dec":32.93366086},
+{"mag":5.65,"ra":15.36377039,"dec":-48.31695913},
+{"mag":4.99,"ra":15.36899835,"dec":-47.92746963},
+{"mag":5.99,"ra":15.3770128,"dec":62.04716944},
+{"mag":5.56,"ra":15.37704724,"dec":39.58149619},
+{"mag":5.72,"ra":15.37734304,"dec":63.34166375},
+{"mag":3.37,"ra":15.37802431,"dec":-44.68957314},
+{"mag":4.54,"ra":15.38593424,"dec":-36.85843627},
+{"mag":5.65,"ra":15.38627817,"dec":-60.65710865},
+{"mag":4.99,"ra":15.38672952,"dec":30.28824114},
+{"mag":4.48,"ra":15.38962715,"dec":-59.32069839},
+{"mag":5.72,"ra":15.39785043,"dec":-12.36941286},
+{"mag":4.92,"ra":15.40331392,"dec":-10.32189476},
+{"mag":4.31,"ra":15.4082045,"dec":37.37696091},
+{"mag":5.36,"ra":15.41250787,"dec":-39.71013154},
+{"mag":3.29,"ra":15.41549558,"dec":58.96602354},
+{"mag":4.6,"ra":15.42229234,"dec":-38.7335881},
+{"mag":5.16,"ra":15.42983476,"dec":15.42805438},
+{"mag":5.89,"ra":15.43736896,"dec":-68.30918936},
+{"mag":5.46,"ra":15.43818468,"dec":34.3358496},
+{"mag":5.46,"ra":15.4550402,"dec":-36.76750151},
+{"mag":5.71,"ra":15.45919471,"dec":-64.531457},
+{"mag":3.66,"ra":15.46384775,"dec":29.10549164},
+{"mag":5.9,"ra":15.46428978,"dec":60.67022438},
+{"mag":5.64,"ra":15.4709439,"dec":-16.7164031},
+{"mag":5.15,"ra":15.47730179,"dec":1.84216258},
+{"mag":5.26,"ra":15.49007671,"dec":-46.7326907},
+{"mag":5.82,"ra":15.51121876,"dec":-16.60945806},
+{"mag":5.04,"ra":15.51548634,"dec":40.83306815},
+{"mag":5.74,"ra":15.51553182,"dec":64.20850517},
+{"mag":5.0,"ra":15.52362616,"dec":77.34933897},
+{"mag":5.4,"ra":15.52522795,"dec":-73.38954647},
+{"mag":4.98,"ra":15.52972009,"dec":40.89936876},
+{"mag":5.5,"ra":15.5435314,"dec":-19.67036366},
+{"mag":5.53,"ra":15.54867436,"dec":-16.85280725},
+{"mag":4.14,"ra":15.5488322,"dec":31.35915517},
+{"mag":5.5,"ra":15.54942996,"dec":-1.18629929},
+{"mag":5.82,"ra":15.56714928,"dec":-40.06634857},
+{"mag":4.61,"ra":15.56958881,"dec":-10.06395962},
+{"mag":5.16,"ra":15.57403676,"dec":-9.18334968},
+{"mag":5.13,"ra":15.5770304,"dec":-28.04690734},
+{"mag":2.22,"ra":15.57810819,"dec":26.71491041},
+{"mag":3.8,"ra":15.58005284,"dec":10.53885916},
+{"mag":2.8,"ra":15.58568343,"dec":-41.16669497},
+{"mag":5.14,"ra":15.58747225,"dec":39.01004619},
+{"mag":5.97,"ra":15.58783805,"dec":53.9221386},
+{"mag":3.91,"ra":15.59209426,"dec":-14.78955365},
+{"mag":4.55,"ra":15.59812916,"dec":-44.95833688},
+{"mag":5.77,"ra":15.59918826,"dec":54.63056806},
+{"mag":5.44,"ra":15.60337126,"dec":-44.39668903},
+{"mag":5.93,"ra":15.60810988,"dec":16.1190982},
+{"mag":5.26,"ra":15.60820887,"dec":10.0104549},
+{"mag":4.11,"ra":15.61199636,"dec":-66.31690469},
+{"mag":3.6,"ra":15.61707183,"dec":-28.13507099},
+{"mag":5.85,"ra":15.62556739,"dec":54.50878294},
+{"mag":5.65,"ra":15.62755815,"dec":69.28321732},
+{"mag":5.79,"ra":15.6300163,"dec":-23.14151509},
+{"mag":5.25,"ra":15.63043082,"dec":40.35328811},
+{"mag":4.34,"ra":15.63425619,"dec":-42.56748493},
+{"mag":5.76,"ra":15.63781769,"dec":46.79799524},
+{"mag":5.82,"ra":15.63784501,"dec":-21.01615303},
+{"mag":5.84,"ra":15.64283343,"dec":50.42335207},
+{"mag":3.66,"ra":15.64427343,"dec":-29.77768935},
+{"mag":5.43,"ra":15.64708465,"dec":-52.37261965},
+{"mag":5.36,"ra":15.64847424,"dec":-19.30170914},
+{"mag":4.64,"ra":15.65630105,"dec":36.63582763},
+{"mag":4.66,"ra":15.66277079,"dec":-34.41189273},
+{"mag":5.95,"ra":15.66574609,"dec":-59.90781512},
+{"mag":4.97,"ra":15.67136259,"dec":-23.81805841},
+{"mag":5.64,"ra":15.6725997,"dec":-73.44663458},
+{"mag":4.64,"ra":15.68653215,"dec":-44.66055926},
+{"mag":4.51,"ra":15.69252564,"dec":19.67050566},
+{"mag":5.34,"ra":15.6964977,"dec":12.84753869},
+{"mag":5.95,"ra":15.69852874,"dec":-76.08186451},
+{"mag":5.8,"ra":15.6985439,"dec":18.46389861},
+{"mag":4.75,"ra":15.69911629,"dec":-19.67857446},
+{"mag":5.23,"ra":15.71065342,"dec":-37.4248964},
+{"mag":4.75,"ra":15.7113992,"dec":-34.71033325},
+{"mag":3.81,"ra":15.71239951,"dec":26.29551419},
+{"mag":5.48,"ra":15.71411754,"dec":52.36083046},
+{"mag":5.57,"ra":15.7211391,"dec":-84.46550807},
+{"mag":5.57,"ra":15.73314456,"dec":32.51582804},
+{"mag":5.86,"ra":15.73384608,"dec":2.51552506},
+{"mag":4.29,"ra":15.73429554,"dec":77.79449901},
+{"mag":5.41,"ra":15.73456121,"dec":-15.67267949},
+{"mag":2.63,"ra":15.7377766,"dec":6.42551971},
+{"mag":5.93,"ra":15.73963559,"dec":-41.81901826},
+{"mag":5.57,"ra":15.75651885,"dec":5.44732255},
+{"mag":5.39,"ra":15.76823606,"dec":-1.80411556},
+{"mag":3.65,"ra":15.76978191,"dec":15.42192602},
+{"mag":4.42,"ra":15.77409608,"dec":7.35323973},
+{"mag":5.94,"ra":15.77635622,"dec":55.47460243},
+{"mag":5.19,"ra":15.77776517,"dec":62.59969448},
+{"mag":5.61,"ra":15.77895293,"dec":-34.68238898},
+{"mag":5.71,"ra":15.78815339,"dec":14.11527157},
+{"mag":5.85,"ra":15.7938649,"dec":55.37661523},
+{"mag":5.54,"ra":15.79808206,"dec":-65.44218988},
+{"mag":5.98,"ra":15.8036977,"dec":13.78933425},
+{"mag":5.89,"ra":15.80956008,"dec":28.15677692},
+{"mag":4.09,"ra":15.81233572,"dec":18.1417793},
+{"mag":5.53,"ra":15.81578184,"dec":-3.81852811},
+{"mag":4.59,"ra":15.82658278,"dec":26.06854936},
+{"mag":3.54,"ra":15.82701825,"dec":-3.43014112},
+{"mag":5.86,"ra":15.83264468,"dec":-48.91238226},
+{"mag":5.78,"ra":15.83530853,"dec":-53.20967534},
+{"mag":5.21,"ra":15.83820259,"dec":2.19662489},
+{"mag":3.71,"ra":15.84691422,"dec":4.4775798},
+{"mag":3.97,"ra":15.84931715,"dec":-33.62710488},
+{"mag":4.63,"ra":15.84965378,"dec":-25.75123489},
+{"mag":5.74,"ra":15.85189103,"dec":-55.05552532},
+{"mag":4.79,"ra":15.85387148,"dec":35.65822638},
+{"mag":5.09,"ra":15.8543465,"dec":-3.09042957},
+{"mag":4.74,"ra":15.85442865,"dec":20.97787548},
+{"mag":5.81,"ra":15.8712727,"dec":55.82658167},
+{"mag":4.6,"ra":15.87783178,"dec":42.44998796},
+{"mag":5.04,"ra":15.88890578,"dec":-20.16699405},
+{"mag":4.59,"ra":15.89353566,"dec":-25.32708018},
+{"mag":4.13,"ra":15.89707695,"dec":-16.7296223},
+{"mag":5.38,"ra":15.89831199,"dec":-24.53309547},
+{"mag":5.41,"ra":15.89885335,"dec":-23.97803598},
+{"mag":5.45,"ra":15.90962885,"dec":20.31086363},
+{"mag":5.35,"ra":15.91052142,"dec":43.13840642},
+{"mag":5.87,"ra":15.91098278,"dec":-25.24367939},
+{"mag":5.95,"ra":15.91676957,"dec":-19.38288098},
+{"mag":2.83,"ra":15.91911334,"dec":-63.42974973},
+{"mag":5.11,"ra":15.9248926,"dec":-68.60298616},
+{"mag":5.63,"ra":15.9250285,"dec":-26.26592073},
+{"mag":5.73,"ra":15.92516957,"dec":42.56615229},
+{"mag":5.78,"ra":15.92567253,"dec":-60.17747419},
+{"mag":5.43,"ra":15.92987919,"dec":37.94676324},
+{"mag":5.76,"ra":15.93498814,"dec":-60.48230498},
+{"mag":3.85,"ra":15.94083173,"dec":15.66473327},
+{"mag":3.87,"ra":15.94807962,"dec":-29.21401221},
+{"mag":5.14,"ra":15.9481893,"dec":-33.96602225},
+{"mag":5.59,"ra":15.94836256,"dec":-33.96415999},
+{"mag":5.54,"ra":15.95406796,"dec":14.41426805},
+{"mag":5.78,"ra":15.9559257,"dec":-36.1853138},
+{"mag":4.14,"ra":15.95980608,"dec":26.87802632},
+{"mag":5.84,"ra":15.96124154,"dec":-20.98302564},
+{"mag":4.96,"ra":15.96322025,"dec":54.74950359},
+{"mag":4.95,"ra":15.96982674,"dec":-14.27931773},
+{"mag":5.43,"ra":15.97635397,"dec":-24.83142974},
+{"mag":2.89,"ra":15.98086685,"dec":-26.1140428},
+{"mag":5.61,"ra":15.98269316,"dec":36.64370627},
+{"mag":5.74,"ra":15.98282214,"dec":-65.03756903},
+{"mag":4.99,"ra":15.99174884,"dec":-41.74439602},
+{"mag":3.42,"ra":16.00203902,"dec":-38.39664079},
+{"mag":5.47,"ra":16.00554968,"dec":-16.53238334},
+{"mag":2.29,"ra":16.00555881,"dec":-22.62162024},
+{"mag":5.53,"ra":16.01323375,"dec":-8.41132413},
+{"mag":5.82,"ra":16.01421079,"dec":4.42718026},
+{"mag":5.39,"ra":16.01744416,"dec":33.30538815},
+{"mag":5.1,"ra":16.02065165,"dec":17.81802578},
+{"mag":4.98,"ra":16.02405295,"dec":29.85107821},
+{"mag":4.01,"ra":16.03158437,"dec":58.56443739},
+{"mag":5.93,"ra":16.03487684,"dec":52.91600607},
+{"mag":4.82,"ra":16.03824696,"dec":22.80439543},
+{"mag":4.72,"ra":16.0466253,"dec":46.03685378},
+{"mag":4.65,"ra":16.05357227,"dec":-49.22972074},
+{"mag":5.79,"ra":16.05537745,"dec":36.63181986},
+{"mag":4.96,"ra":16.05574082,"dec":-25.86514891},
+{"mag":4.9,"ra":16.05672293,"dec":-38.60247122},
+{"mag":5.73,"ra":16.05872112,"dec":76.79388926},
+{"mag":4.63,"ra":16.05895029,"dec":-57.77487351},
+{"mag":5.91,"ra":16.07691975,"dec":-37.86266825},
+{"mag":2.56,"ra":16.0906208,"dec":-19.80539286},
+{"mag":4.9,"ra":16.09071534,"dec":-19.80184191},
+{"mag":5.7,"ra":16.09885608,"dec":-72.40107181},
+{"mag":5.9,"ra":16.10177339,"dec":-23.60624433},
+{"mag":5.44,"ra":16.10548112,"dec":67.80998136},
+{"mag":4.73,"ra":16.10817322,"dec":-45.17327517},
+{"mag":4.22,"ra":16.10987675,"dec":-36.80221297},
+{"mag":3.93,"ra":16.11345346,"dec":-20.66913479},
+{"mag":5.72,"ra":16.12115965,"dec":-36.75553887},
+{"mag":4.31,"ra":16.1234167,"dec":-20.8686541},
+{"mag":5.75,"ra":16.12678906,"dec":-12.74534315},
+{"mag":5.63,"ra":16.12709748,"dec":9.89176025},
+{"mag":5.0,"ra":16.13459624,"dec":17.04699349},
+{"mag":5.35,"ra":16.13542248,"dec":-26.32666483},
+{"mag":5.69,"ra":16.14113418,"dec":8.53432477},
+{"mag":5.86,"ra":16.14547977,"dec":-23.68535317},
+{"mag":4.23,"ra":16.14616647,"dec":44.93481883},
+{"mag":4.73,"ra":16.14953571,"dec":36.49010935},
+{"mag":5.93,"ra":16.14969463,"dec":3.45444515},
+{"mag":5.93,"ra":16.15307314,"dec":6.38050993},
+{"mag":5.57,"ra":16.15515649,"dec":-57.93417299},
+{"mag":5.39,"ra":16.16403676,"dec":-3.46673076},
+{"mag":5.5,"ra":16.16461312,"dec":-33.54569572},
+{"mag":5.48,"ra":16.18042458,"dec":75.87753079},
+{"mag":5.09,"ra":16.18392418,"dec":-29.41600661},
+{"mag":5.86,"ra":16.18826874,"dec":-41.11949816},
+{"mag":5.74,"ra":16.19390255,"dec":23.49482992},
+{"mag":5.89,"ra":16.19655686,"dec":42.37450876},
+{"mag":5.62,"ra":16.19668361,"dec":36.42516245},
+{"mag":4.0,"ra":16.19992791,"dec":-19.46064684},
+{"mag":4.93,"ra":16.20000043,"dec":-10.06418514},
+{"mag":5.43,"ra":16.20202481,"dec":-8.54757943},
+{"mag":5.67,"ra":16.20445968,"dec":-28.4172057},
+{"mag":4.58,"ra":16.20505881,"dec":-27.92631564},
+{"mag":5.46,"ra":16.22094671,"dec":5.0210989},
+{"mag":5.78,"ra":16.22299994,"dec":-55.54084556},
+{"mag":4.95,"ra":16.22464842,"dec":-54.63041289},
+{"mag":5.24,"ra":16.23080791,"dec":-11.83772219},
+{"mag":2.73,"ra":16.23910173,"dec":-3.69397562},
+{"mag":5.91,"ra":16.23954754,"dec":-33.01104217},
+{"mag":5.23,"ra":16.24473355,"dec":33.85882404},
+{"mag":5.13,"ra":16.25426315,"dec":-47.37190984},
+{"mag":3.86,"ra":16.25729615,"dec":-63.68564897},
+{"mag":5.72,"ra":16.25796591,"dec":18.80829264},
+{"mag":5.49,"ra":16.26031482,"dec":-8.36823651},
+{"mag":5.61,"ra":16.26383642,"dec":-57.91222851},
+{"mag":5.45,"ra":16.27868605,"dec":-53.81110764},
+{"mag":5.8,"ra":16.27910321,"dec":29.1503022},
+{"mag":4.97,"ra":16.28359319,"dec":-50.06811224},
+{"mag":5.95,"ra":16.28485612,"dec":-67.94107968},
+{"mag":5.37,"ra":16.28759407,"dec":59.75496116},
+{"mag":4.95,"ra":16.29180584,"dec":75.75470385},
+{"mag":4.8,"ra":16.30497801,"dec":-28.61377598},
+{"mag":3.23,"ra":16.30534466,"dec":-4.69260809},
+{"mag":5.97,"ra":16.3167869,"dec":-14.87282262},
+{"mag":5.93,"ra":16.31978681,"dec":49.03807805},
+{"mag":5.44,"ra":16.32156678,"dec":-42.67394008},
+{"mag":5.53,"ra":16.32574508,"dec":-30.90676896},
+{"mag":3.91,"ra":16.3290133,"dec":46.31327084},
+{"mag":4.01,"ra":16.33071322,"dec":-50.15537923},
+{"mag":5.48,"ra":16.33201134,"dec":39.70859042},
+{"mag":4.68,"ra":16.33912085,"dec":-78.69565609},
+{"mag":5.76,"ra":16.34034183,"dec":-55.13967135},
+{"mag":5.27,"ra":16.34079548,"dec":-78.66742066},
+{"mag":4.55,"ra":16.34393983,"dec":-24.16928427},
+{"mag":2.9,"ra":16.35314514,"dec":-25.59275259},
+{"mag":5.26,"ra":16.36353927,"dec":69.10941712},
+{"mag":3.74,"ra":16.36534546,"dec":19.15302185},
+{"mag":4.82,"ra":16.3679,"dec":1.02892219},
+{"mag":4.86,"ra":16.36830281,"dec":30.89173424},
+{"mag":5.2,"ra":16.37261707,"dec":33.79914473},
+{"mag":5.32,"ra":16.37444614,"dec":-49.57229123},
+{"mag":5.89,"ra":16.37474275,"dec":-43.91202357},
+{"mag":5.4,"ra":16.37478397,"dec":33.70335685},
+{"mag":5.67,"ra":16.39644162,"dec":61.69637867},
+{"mag":2.73,"ra":16.39986301,"dec":61.51407536},
+{"mag":5.37,"ra":16.4003431,"dec":-39.19298857},
+{"mag":4.48,"ra":16.40172146,"dec":-20.03721137},
+{"mag":5.83,"ra":16.40300756,"dec":6.94817146},
+{"mag":5.75,"ra":16.4070352,"dec":55.2050456},
+{"mag":5.42,"ra":16.40882371,"dec":-37.56597007},
+{"mag":5.4,"ra":16.41103504,"dec":-29.70446361},
+{"mag":5.53,"ra":16.42337938,"dec":37.39407872},
+{"mag":4.57,"ra":16.42359154,"dec":14.03341514},
+{"mag":4.57,"ra":16.42642254,"dec":-23.44711764},
+{"mag":5.55,"ra":16.42875787,"dec":78.96360053},
+{"mag":4.22,"ra":16.45039952,"dec":-18.45619698},
+{"mag":4.46,"ra":16.45306883,"dec":-47.5547359},
+{"mag":5.24,"ra":16.46207137,"dec":-7.59755617},
+{"mag":4.62,"ra":16.46339637,"dec":-8.37170055},
+{"mag":5.28,"ra":16.46590946,"dec":-64.05800515},
+{"mag":4.94,"ra":16.46640365,"dec":68.76805491},
+{"mag":5.79,"ra":16.47068268,"dec":-37.17981606},
+{"mag":5.67,"ra":16.47088434,"dec":-58.59970914},
+{"mag":4.9,"ra":16.47438923,"dec":-70.08467012},
+{"mag":5.41,"ra":16.4761048,"dec":0.66516717},
+{"mag":4.83,"ra":16.47736803,"dec":41.88169065},
+{"mag":1.06,"ra":16.49012986,"dec":-26.43194608},
+{"mag":5.35,"ra":16.49509179,"dec":-46.24321937},
+{"mag":5.66,"ra":16.49636191,"dec":-14.5508975},
+{"mag":4.79,"ra":16.50346608,"dec":-25.11515935},
+{"mag":2.78,"ra":16.50368379,"dec":21.4896485},
+{"mag":5.24,"ra":16.50933449,"dec":20.47934589},
+{"mag":5.19,"ra":16.51371485,"dec":-61.63348127},
+{"mag":3.82,"ra":16.51523367,"dec":1.98410056},
+{"mag":4.29,"ra":16.51899859,"dec":-16.61264015},
+{"mag":5.76,"ra":16.52039936,"dec":22.19543891},
+{"mag":4.24,"ra":16.5230393,"dec":-34.70432087},
+{"mag":5.31,"ra":16.52826981,"dec":-41.81714208},
+{"mag":5.61,"ra":16.5297874,"dec":45.59818403},
+{"mag":4.45,"ra":16.53560738,"dec":-21.46647783},
+{"mag":5.92,"ra":16.54045984,"dec":60.82334694},
+{"mag":5.63,"ra":16.54324337,"dec":5.52122134},
+{"mag":4.84,"ra":16.54344396,"dec":11.48823391},
+{"mag":3.86,"ra":16.55762893,"dec":-78.89695917},
+{"mag":4.86,"ra":16.56806118,"dec":-44.04530868},
+{"mag":4.2,"ra":16.5683859,"dec":42.43689565},
+{"mag":5.5,"ra":16.57204705,"dec":-70.98806509},
+{"mag":5.5,"ra":16.59576971,"dec":-65.49532908},
+{"mag":2.82,"ra":16.59804428,"dec":-28.21596156},
+{"mag":5.83,"ra":16.60311441,"dec":46.61332505},
+{"mag":5.53,"ra":16.60317578,"dec":52.89997858},
+{"mag":5.07,"ra":16.60381444,"dec":52.92435554},
+{"mag":5.77,"ra":16.6058843,"dec":-2.32383592},
+{"mag":4.18,"ra":16.60623914,"dec":-35.25535553},
+{"mag":5.46,"ra":16.60626831,"dec":-42.85885401},
+{"mag":2.54,"ra":16.61931389,"dec":-10.5671518},
+{"mag":5.28,"ra":16.63346092,"dec":56.01538883},
+{"mag":5.83,"ra":16.64063924,"dec":-43.39837584},
+{"mag":4.86,"ra":16.64580222,"dec":48.92827739},
+{"mag":5.93,"ra":16.65145421,"dec":-37.21726333},
+{"mag":5.77,"ra":16.67741306,"dec":4.21981484},
+{"mag":4.84,"ra":16.68197761,"dec":64.58908555},
+{"mag":2.81,"ra":16.68818808,"dec":31.60188695},
+{"mag":5.57,"ra":16.68900441,"dec":-48.76296994},
+{"mag":5.89,"ra":16.68975844,"dec":-68.2960944},
+{"mag":4.91,"ra":16.69288785,"dec":-17.74216462},
+{"mag":5.92,"ra":16.69352733,"dec":26.91698945},
+{"mag":5.62,"ra":16.69450765,"dec":-49.65154575},
+{"mag":5.74,"ra":16.69515019,"dec":1.18110145},
+{"mag":5.84,"ra":16.69597086,"dec":-33.14562113},
+{"mag":5.55,"ra":16.6982428,"dec":-19.92447879},
+{"mag":3.48,"ra":16.71492737,"dec":38.92246103},
+{"mag":4.23,"ra":16.71817212,"dec":-77.51657182},
+{"mag":5.99,"ra":16.71837134,"dec":77.51347098},
+{"mag":5.96,"ra":16.74437606,"dec":-53.15228963},
+{"mag":5.64,"ra":16.74516725,"dec":-40.83962254},
+{"mag":5.99,"ra":16.75005786,"dec":-28.50965621},
+{"mag":4.84,"ra":16.75494158,"dec":56.78168723},
+{"mag":5.6,"ra":16.75625144,"dec":15.74541189},
+{"mag":5.15,"ra":16.76385916,"dec":8.58257816},
+{"mag":4.21,"ra":16.76615597,"dec":82.03725071},
+{"mag":5.74,"ra":16.77256318,"dec":-58.50356849},
+{"mag":5.1,"ra":16.77778168,"dec":-67.10965828},
+{"mag":5.48,"ra":16.77999208,"dec":-39.37689836},
+{"mag":5.55,"ra":16.78879558,"dec":-58.34139234},
+{"mag":5.86,"ra":16.78881801,"dec":42.23897955},
+{"mag":5.22,"ra":16.79623089,"dec":5.24684013},
+{"mag":1.91,"ra":16.81107382,"dec":-69.02763503},
+{"mag":4.82,"ra":16.82061092,"dec":45.9834478},
+{"mag":5.91,"ra":16.8262984,"dec":13.2611997},
+{"mag":3.77,"ra":16.82975317,"dec":-59.04131648},
+{"mag":4.64,"ra":16.83054809,"dec":-10.78280069},
+{"mag":2.29,"ra":16.83617915,"dec":-34.29260982},
+{"mag":5.48,"ra":16.83870852,"dec":7.24770528},
+{"mag":5.73,"ra":16.84415616,"dec":29.80654506},
+{"mag":5.51,"ra":16.85692741,"dec":1.21598136},
+{"mag":5.23,"ra":16.85936724,"dec":-41.23053288},
+{"mag":5.03,"ra":16.86257093,"dec":24.65641963},
+{"mag":3.0,"ra":16.86451079,"dec":-38.04732717},
+{"mag":3.56,"ra":16.87226486,"dec":-38.01747781},
+{"mag":5.34,"ra":16.88281119,"dec":31.70171538},
+{"mag":5.99,"ra":16.88822003,"dec":47.41649815},
+{"mag":5.86,"ra":16.89034916,"dec":-20.41548861},
+{"mag":5.95,"ra":16.89512138,"dec":-43.05089096},
+{"mag":4.7,"ra":16.89992424,"dec":-42.36201968},
+{"mag":5.91,"ra":16.90011232,"dec":-57.90920925},
+{"mag":4.39,"ra":16.90013982,"dec":10.16544339},
+{"mag":5.46,"ra":16.9005106,"dec":-41.80638305},
+{"mag":5.84,"ra":16.90748371,"dec":-42.4788755},
+{"mag":3.62,"ra":16.90975143,"dec":-42.36075916},
+{"mag":5.23,"ra":16.90991987,"dec":-6.15392897},
+{"mag":5.39,"ra":16.91531534,"dec":20.95848435},
+{"mag":5.78,"ra":16.91625146,"dec":-41.15085448},
+{"mag":5.35,"ra":16.92284384,"dec":18.43318381},
+{"mag":5.99,"ra":16.92352179,"dec":-63.26962566},
+{"mag":4.88,"ra":16.93371098,"dec":65.13467204},
+{"mag":5.94,"ra":16.94133388,"dec":-52.28364331},
+{"mag":5.57,"ra":16.94667727,"dec":-23.15032178},
+{"mag":5.48,"ra":16.95310334,"dec":-33.2594689},
+{"mag":3.19,"ra":16.96118627,"dec":9.37505626},
+{"mag":5.53,"ra":16.97165247,"dec":-50.64109176},
+{"mag":3.12,"ra":16.97700854,"dec":-55.99005508},
+{"mag":5.79,"ra":16.99277282,"dec":-69.26813178},
+{"mag":4.06,"ra":16.99306851,"dec":-53.16049005},
+{"mag":5.88,"ra":16.99936219,"dec":-25.09216189},
+{"mag":5.64,"ra":17.00174643,"dec":-54.59700158},
+{"mag":5.74,"ra":17.00263291,"dec":-24.98893659},
+{"mag":3.92,"ra":17.00483505,"dec":30.92633926},
+{"mag":5.98,"ra":17.00749313,"dec":-48.64756342},
+{"mag":5.95,"ra":17.01027594,"dec":-35.9339762},
+{"mag":5.69,"ra":17.01615027,"dec":22.6321519},
+{"mag":4.82,"ra":17.01767375,"dec":-4.22245426},
+{"mag":5.27,"ra":17.02676648,"dec":33.56826922},
+{"mag":5.03,"ra":17.03129146,"dec":-32.14340148},
+{"mag":5.76,"ra":17.03851681,"dec":25.50537839},
+{"mag":4.97,"ra":17.05218222,"dec":14.0921003},
+{"mag":5.27,"ra":17.05241925,"dec":-53.23662642},
+{"mag":5.91,"ra":17.06092079,"dec":13.60542885},
+{"mag":5.91,"ra":17.06413171,"dec":-38.1524875},
+{"mag":5.73,"ra":17.07353474,"dec":-57.71210729},
+{"mag":4.83,"ra":17.08037529,"dec":-34.12292247},
+{"mag":4.91,"ra":17.08893952,"dec":54.46986308},
+{"mag":4.89,"ra":17.08962783,"dec":12.74085469},
+{"mag":5.63,"ra":17.09229356,"dec":-0.8920654},
+{"mag":5.56,"ra":17.10503016,"dec":22.08424707},
+{"mag":5.98,"ra":17.10560976,"dec":-37.22753062},
+{"mag":5.41,"ra":17.13391136,"dec":35.93521504},
+{"mag":5.98,"ra":17.13745897,"dec":-17.60896664},
+{"mag":3.17,"ra":17.1464514,"dec":65.71463676},
+{"mag":5.93,"ra":17.14654045,"dec":-30.40356872},
+{"mag":5.07,"ra":17.15924486,"dec":40.77701519},
+{"mag":5.43,"ra":17.16331051,"dec":-10.5230375},
+{"mag":2.43,"ra":17.17296177,"dec":-15.72514757},
+{"mag":5.06,"ra":17.17843068,"dec":-44.5575511},
+{"mag":5.94,"ra":17.19407635,"dec":-48.87338828},
+{"mag":3.32,"ra":17.20254886,"dec":-43.23849039},
+{"mag":5.66,"ra":17.20450429,"dec":-39.50677484},
+{"mag":5.32,"ra":17.20772381,"dec":10.58522897},
+{"mag":5.54,"ra":17.20904427,"dec":62.87422062},
+{"mag":5.95,"ra":17.21626581,"dec":-32.4383273},
+{"mag":5.87,"ra":17.22169792,"dec":-67.19637197},
+{"mag":2.78,"ra":17.24412845,"dec":14.39025314},
+{"mag":3.12,"ra":17.25053449,"dec":24.83958739},
+{"mag":3.16,"ra":17.25079285,"dec":36.80915527},
+{"mag":5.6,"ra":17.25534646,"dec":-33.54841317},
+{"mag":5.98,"ra":17.25563764,"dec":-14.58412556},
+{"mag":4.33,"ra":17.25591313,"dec":-26.60004896},
+{"mag":5.95,"ra":17.26002159,"dec":-38.59295116},
+{"mag":5.99,"ra":17.26152677,"dec":23.74270442},
+{"mag":5.89,"ra":17.27547734,"dec":1.21058377},
+{"mag":4.72,"ra":17.27686266,"dec":-0.44514192},
+{"mag":5.53,"ra":17.28436509,"dec":-32.66270528},
+{"mag":4.8,"ra":17.28876958,"dec":33.10011419},
+{"mag":4.64,"ra":17.29452385,"dec":37.29134328},
+{"mag":5.14,"ra":17.30019909,"dec":-24.28688289},
+{"mag":5.97,"ra":17.3064667,"dec":38.81121445},
+{"mag":5.03,"ra":17.31027377,"dec":10.86471277},
+{"mag":5.76,"ra":17.31328853,"dec":-44.12970725},
+{"mag":5.68,"ra":17.31347089,"dec":28.82298375},
+{"mag":5.91,"ra":17.31565561,"dec":-34.98957161},
+{"mag":5.47,"ra":17.31748729,"dec":-46.6365001},
+{"mag":5.93,"ra":17.32014191,"dec":-59.69459145},
+{"mag":5.74,"ra":17.32695753,"dec":80.13639898},
+{"mag":5.36,"ra":17.33606293,"dec":25.53764398},
+{"mag":5.01,"ra":17.33857379,"dec":18.05721601},
+{"mag":5.51,"ra":17.33920748,"dec":46.24068047},
+{"mag":5.38,"ra":17.3442982,"dec":32.47027246},
+{"mag":4.32,"ra":17.34712098,"dec":-12.846882},
+{"mag":5.13,"ra":17.348394,"dec":24.49943984},
+{"mag":4.39,"ra":17.35005841,"dec":-21.11243499},
+{"mag":5.55,"ra":17.36211468,"dec":39.97480822},
+{"mag":5.69,"ra":17.36259731,"dec":53.42042212},
+{"mag":4.76,"ra":17.36653743,"dec":-67.7706496},
+{"mag":3.27,"ra":17.36682891,"dec":-24.99948797},
+{"mag":5.39,"ra":17.36829971,"dec":-70.12317887},
+{"mag":5.91,"ra":17.38187068,"dec":-37.22069314},
+{"mag":5.86,"ra":17.3820078,"dec":-58.0102893},
+{"mag":5.76,"ra":17.38530904,"dec":-56.52555632},
+{"mag":5.21,"ra":17.38780026,"dec":-47.4681538},
+{"mag":5.3,"ra":17.3893308,"dec":-28.14276032},
+{"mag":4.15,"ra":17.39471468,"dec":37.14592396},
+{"mag":5.77,"ra":17.39933714,"dec":8.85258733},
+{"mag":5.69,"ra":17.40029895,"dec":-62.86413165},
+{"mag":5.7,"ra":17.40183743,"dec":22.96037466},
+{"mag":5.1,"ra":17.40363683,"dec":-44.1625017},
+{"mag":5.76,"ra":17.40522114,"dec":-60.6737692},
+{"mag":5.75,"ra":17.4087582,"dec":16.30107639},
+{"mag":5.82,"ra":17.41167781,"dec":-21.44141348},
+{"mag":2.84,"ra":17.42166588,"dec":-55.52982397},
+{"mag":3.31,"ra":17.42323884,"dec":-56.37768824},
+{"mag":5.65,"ra":17.42815655,"dec":60.04834069},
+{"mag":5.19,"ra":17.43334144,"dec":-50.63353205},
+{"mag":4.16,"ra":17.43950482,"dec":-24.17502346},
+{"mag":4.34,"ra":17.441911,"dec":4.14034239},
+{"mag":4.53,"ra":17.44387084,"dec":-5.08649188},
+{"mag":5.83,"ra":17.44562285,"dec":48.26007218},
+{"mag":5.94,"ra":17.44615702,"dec":34.69569698},
+{"mag":5.52,"ra":17.44697978,"dec":20.08093784},
+{"mag":5.28,"ra":17.44777318,"dec":-45.84296289},
+{"mag":5.9,"ra":17.4534613,"dec":-50.6303656},
+{"mag":4.28,"ra":17.45590667,"dec":-29.86669942},
+{"mag":5.98,"ra":17.46043253,"dec":-29.7244896},
+{"mag":5.72,"ra":17.46600437,"dec":-52.29702909},
+{"mag":5.93,"ra":17.47747544,"dec":-55.16966503},
+{"mag":5.41,"ra":17.48047018,"dec":0.33057703},
+{"mag":5.98,"ra":17.48224705,"dec":-36.7782678},
+{"mag":5.31,"ra":17.50663099,"dec":-1.06250365},
+{"mag":2.79,"ra":17.5072158,"dec":52.30135901},
+{"mag":4.41,"ra":17.512305,"dec":26.1106045},
+{"mag":2.7,"ra":17.512733,"dec":-37.29574016},
+{"mag":5.78,"ra":17.51304716,"dec":86.96802383},
+{"mag":5.63,"ra":17.51538085,"dec":31.15810073},
+{"mag":3.6,"ra":17.51832693,"dec":-60.68360667},
+{"mag":5.57,"ra":17.52259588,"dec":2.72446012},
+{"mag":5.99,"ra":17.52313449,"dec":-56.92095404},
+{"mag":4.78,"ra":17.52359746,"dec":-23.96258036},
+{"mag":5.83,"ra":17.52429809,"dec":-80.85902834},
+{"mag":5.66,"ra":17.53043733,"dec":28.40743646},
+{"mag":2.84,"ra":17.53070044,"dec":-49.87598159},
+{"mag":5.07,"ra":17.53274721,"dec":68.13470186},
+{"mag":4.89,"ra":17.53622721,"dec":55.18411077},
+{"mag":4.35,"ra":17.53691588,"dec":86.58632924},
+{"mag":4.86,"ra":17.53774416,"dec":55.17280674},
+{"mag":5.72,"ra":17.55203065,"dec":41.24359953},
+{"mag":5.84,"ra":17.55205196,"dec":-41.17305756},
+{"mag":5.65,"ra":17.556345,"dec":19.25689917},
+{"mag":5.61,"ra":17.55829711,"dec":-5.74457168},
+{"mag":1.62,"ra":17.56014624,"dec":-37.10374835},
+{"mag":5.68,"ra":17.5609422,"dec":16.31770553},
+{"mag":5.8,"ra":17.57685855,"dec":9.58672378},
+{"mag":5.69,"ra":17.57846966,"dec":-32.58165772},
+{"mag":5.54,"ra":17.57954144,"dec":-11.24200693},
+{"mag":2.08,"ra":17.58222354,"dec":12.56057584},
+{"mag":5.23,"ra":17.58312521,"dec":61.8758315},
+{"mag":4.56,"ra":17.59433647,"dec":-46.50559076},
+{"mag":4.26,"ra":17.60912409,"dec":-38.63486521},
+{"mag":5.35,"ra":17.61045164,"dec":48.58547866},
+{"mag":4.77,"ra":17.61585831,"dec":68.75718933},
+{"mag":5.87,"ra":17.61912143,"dec":72.45575693},
+{"mag":1.86,"ra":17.62197938,"dec":-42.99782155},
+{"mag":5.89,"ra":17.62425328,"dec":-50.05948478},
+{"mag":5.76,"ra":17.62530516,"dec":24.3099689},
+{"mag":3.54,"ra":17.62645145,"dec":-15.39840835},
+{"mag":5.94,"ra":17.62672342,"dec":-15.57103656},
+{"mag":4.58,"ra":17.63075549,"dec":-8.11872126},
+{"mag":5.25,"ra":17.63487953,"dec":-54.50007025},
+{"mag":5.74,"ra":17.63597582,"dec":-10.92624683},
+{"mag":3.82,"ra":17.65774789,"dec":46.00632216},
+{"mag":4.76,"ra":17.67325897,"dec":-49.41515481},
+{"mag":5.78,"ra":17.68784213,"dec":-46.92181116},
+{"mag":4.24,"ra":17.69025458,"dec":-12.87517268},
+{"mag":5.97,"ra":17.69231241,"dec":6.31316423},
+{"mag":4.57,"ra":17.69897418,"dec":72.14949916},
+{"mag":5.81,"ra":17.69945511,"dec":72.15757591},
+{"mag":5.54,"ra":17.69962173,"dec":15.95217942},
+{"mag":5.56,"ra":17.70788815,"dec":24.56431006},
+{"mag":2.39,"ra":17.70813327,"dec":-39.02992092},
+{"mag":5.53,"ra":17.71419225,"dec":-36.94550742},
+{"mag":5.73,"ra":17.72267744,"dec":24.32764591},
+{"mag":4.86,"ra":17.72384859,"dec":-21.68308566},
+{"mag":2.76,"ra":17.72454914,"dec":4.56691684},
+{"mag":5.75,"ra":17.73310084,"dec":53.80175482},
+{"mag":5.12,"ra":17.73575474,"dec":-51.83358836},
+{"mag":5.87,"ra":17.7450016,"dec":-42.72930009},
+{"mag":5.97,"ra":17.74884553,"dec":-57.54551015},
+{"mag":3.61,"ra":17.76222289,"dec":-64.7237345},
+{"mag":3.42,"ra":17.77436636,"dec":27.72249917},
+{"mag":5.61,"ra":17.78556649,"dec":17.69704078},
+{"mag":4.53,"ra":17.79267418,"dec":-27.83076255},
+{"mag":2.99,"ra":17.79307809,"dec":-40.12698197},
+{"mag":5.93,"ra":17.79355351,"dec":-14.72578118},
+{"mag":3.75,"ra":17.79821501,"dec":2.70745875},
+{"mag":5.69,"ra":17.8068757,"dec":20.56542749},
+{"mag":5.09,"ra":17.81365252,"dec":25.62296216},
+{"mag":5.02,"ra":17.8178705,"dec":50.78054478},
+{"mag":4.79,"ra":17.81957591,"dec":-31.70318435},
+{"mag":5.02,"ra":17.82414913,"dec":76.96227797},
+{"mag":3.19,"ra":17.83095867,"dec":-37.04337105},
+{"mag":4.78,"ra":17.83641944,"dec":-40.09042823},
+{"mag":5.51,"ra":17.83968665,"dec":29.32202669},
+{"mag":5.68,"ra":17.84121953,"dec":-53.61238082},
+{"mag":5.94,"ra":17.85904807,"dec":-40.77232768},
+{"mag":5.78,"ra":17.85985326,"dec":-60.16401809},
+{"mag":5.88,"ra":17.87046086,"dec":-34.79918358},
+{"mag":5.84,"ra":17.87215547,"dec":-34.41683044},
+{"mag":5.91,"ra":17.87651756,"dec":1.30504981},
+{"mag":5.77,"ra":17.88729442,"dec":6.10125423},
+{"mag":5.17,"ra":17.88833939,"dec":40.00783707},
+{"mag":5.58,"ra":17.88985295,"dec":-34.89510976},
+{"mag":3.73,"ra":17.8921193,"dec":56.87245216},
+{"mag":5.43,"ra":17.91976051,"dec":72.00513388},
+{"mag":5.47,"ra":17.9236628,"dec":26.04997848},
+{"mag":5.62,"ra":17.93078106,"dec":22.46422113},
+{"mag":3.86,"ra":17.93754959,"dec":37.25052158},
+{"mag":5.82,"ra":17.93844528,"dec":0.67035571},
+{"mag":5.93,"ra":17.93862257,"dec":-15.81236072},
+{"mag":2.24,"ra":17.94343829,"dec":51.48895101},
+{"mag":5.76,"ra":17.94494973,"dec":-28.0653494},
+{"mag":4.85,"ra":17.94650712,"dec":-44.34219871},
+{"mag":5.44,"ra":17.94659672,"dec":-4.08180189},
+{"mag":5.95,"ra":17.95119524,"dec":0.06668731},
+{"mag":3.7,"ra":17.96273073,"dec":29.24792527},
+{"mag":4.88,"ra":17.96327959,"dec":-41.71625842},
+{"mag":4.41,"ra":17.97504159,"dec":30.18926892},
+{"mag":5.99,"ra":17.97751395,"dec":-28.75907603},
+{"mag":5.74,"ra":17.98213313,"dec":-36.85840855},
+{"mag":3.32,"ra":17.9837771,"dec":-9.77334973},
+{"mag":5.0,"ra":17.98479993,"dec":-30.25300479},
+{"mag":5.86,"ra":17.99354576,"dec":-4.82091169},
+{"mag":4.74,"ra":17.99654353,"dec":-23.81601126},
+{"mag":5.69,"ra":17.99894532,"dec":45.50146059},
+{"mag":4.67,"ra":18.00095018,"dec":16.75094481},
+{"mag":5.74,"ra":18.00251852,"dec":80.00379394},
+{"mag":4.79,"ra":18.00438821,"dec":4.36864674},
+{"mag":4.62,"ra":18.00803345,"dec":-3.69016112},
+{"mag":3.93,"ra":18.01075431,"dec":2.93158759},
+{"mag":4.26,"ra":18.02511192,"dec":21.59568814},
+{"mag":4.42,"ra":18.02921931,"dec":1.30510936},
+{"mag":5.72,"ra":18.03177249,"dec":-22.78029065},
+{"mag":5.25,"ra":18.03973602,"dec":20.83364838},
+{"mag":5.37,"ra":18.04752718,"dec":-24.28242475},
+{"mag":4.77,"ra":18.05136409,"dec":-8.18025785},
+{"mag":5.89,"ra":18.0645679,"dec":-24.36072589},
+{"mag":5.98,"ra":18.08066382,"dec":-35.90136032},
+{"mag":4.66,"ra":18.08367292,"dec":-29.5800762},
+{"mag":4.03,"ra":18.09089245,"dec":2.50243928},
+{"mag":2.98,"ra":18.09681239,"dec":-30.42365007},
+{"mag":5.72,"ra":18.09711054,"dec":32.23072212},
+{"mag":4.96,"ra":18.10053019,"dec":22.21889206},
+{"mag":5.84,"ra":18.10205582,"dec":-8.32391503},
+{"mag":5.74,"ra":18.10419822,"dec":-4.75117796},
+{"mag":5.94,"ra":18.10656756,"dec":-36.01980798},
+{"mag":3.65,"ra":18.11052188,"dec":-50.09145462},
+{"mag":4.92,"ra":18.11385681,"dec":-43.42496169},
+{"mag":5.05,"ra":18.11711321,"dec":30.56186809},
+{"mag":4.64,"ra":18.12176509,"dec":8.73379361},
+{"mag":3.71,"ra":18.12250574,"dec":9.56365345},
+{"mag":5.0,"ra":18.12464955,"dec":43.46203247},
+{"mag":3.84,"ra":18.12570854,"dec":28.76247025},
+{"mag":5.52,"ra":18.13011216,"dec":-17.15430069},
+{"mag":5.79,"ra":18.1304192,"dec":26.09726716},
+{"mag":5.83,"ra":18.13043402,"dec":26.10122114},
+{"mag":5.49,"ra":18.13397424,"dec":36.40171633},
+{"mag":4.55,"ra":18.13471194,"dec":-28.45701627},
+{"mag":4.33,"ra":18.14299745,"dec":-63.66804844},
+{"mag":4.37,"ra":18.14597017,"dec":20.81457203},
+{"mag":5.1,"ra":18.1480162,"dec":20.04528382},
+{"mag":5.71,"ra":18.15940668,"dec":3.99328654},
+{"mag":5.67,"ra":18.16500153,"dec":3.12029682},
+{"mag":5.57,"ra":18.16638508,"dec":36.46625671},
+{"mag":5.53,"ra":18.16827928,"dec":-30.72859747},
+{"mag":5.47,"ra":18.17396096,"dec":-62.00276787},
+{"mag":5.97,"ra":18.17542561,"dec":54.2859522},
+{"mag":5.5,"ra":18.17785799,"dec":3.32426855},
+{"mag":5.86,"ra":18.18487117,"dec":-41.35902019},
+{"mag":4.52,"ra":18.18716006,"dec":-45.95432704},
+{"mag":5.86,"ra":18.18771162,"dec":-75.89079431},
+{"mag":4.96,"ra":18.19536888,"dec":-23.70116777},
+{"mag":5.98,"ra":18.19586433,"dec":33.44702748},
+{"mag":4.96,"ra":18.19837968,"dec":31.4052884},
+{"mag":5.86,"ra":18.2094905,"dec":-73.67177867},
+{"mag":5.47,"ra":18.22019435,"dec":-41.33609648},
+{"mag":3.84,"ra":18.2293913,"dec":-21.05883031},
+{"mag":4.99,"ra":18.23148847,"dec":64.39719935},
+{"mag":5.49,"ra":18.23775282,"dec":-21.71310708},
+{"mag":5.29,"ra":18.25358485,"dec":-20.7282667},
+{"mag":5.96,"ra":18.25360254,"dec":-20.38796936},
+{"mag":5.96,"ra":18.25473581,"dec":68.75596485},
+{"mag":5.56,"ra":18.26077204,"dec":42.15934312},
+{"mag":5.58,"ra":18.2612953,"dec":-63.05530804},
+{"mag":5.45,"ra":18.26483152,"dec":-44.20649632},
+{"mag":5.99,"ra":18.28141412,"dec":-3.00673658},
+{"mag":5.36,"ra":18.28542707,"dec":-56.02331993},
+{"mag":5.81,"ra":18.28656366,"dec":-17.37385188},
+{"mag":3.1,"ra":18.29381366,"dec":-36.76128103},
+{"mag":4.66,"ra":18.30088554,"dec":-27.04263452},
+{"mag":5.41,"ra":18.31932312,"dec":7.25976189},
+{"mag":5.3,"ra":18.31963182,"dec":24.44604619},
+{"mag":4.33,"ra":18.33103366,"dec":36.06444696},
+{"mag":5.39,"ra":18.33576901,"dec":-15.83160305},
+{"mag":4.92,"ra":18.33830655,"dec":21.9614409},
+{"mag":4.22,"ra":18.34595588,"dec":71.33772734},
+{"mag":4.85,"ra":18.34779503,"dec":3.37714467},
+{"mag":5.61,"ra":18.34915817,"dec":29.85879387},
+{"mag":2.72,"ra":18.34989489,"dec":-29.82803914},
+{"mag":5.12,"ra":18.35028265,"dec":28.86983516},
+{"mag":3.55,"ra":18.35064971,"dec":72.73369763},
+{"mag":3.23,"ra":18.35525571,"dec":-2.897122},
+{"mag":5.76,"ra":18.35638568,"dec":-18.85998365},
+{"mag":5.02,"ra":18.3590791,"dec":49.12146945},
+{"mag":5.41,"ra":18.36908144,"dec":23.28498721},
+{"mag":5.09,"ra":18.37183447,"dec":-38.65682498},
+{"mag":5.99,"ra":18.37647589,"dec":12.02964433},
+{"mag":5.25,"ra":18.38027658,"dec":17.82657724},
+{"mag":5.33,"ra":18.38141054,"dec":-36.66949254},
+{"mag":5.71,"ra":18.38671319,"dec":-12.01470763},
+{"mag":4.35,"ra":18.38711682,"dec":-61.49390506},
+{"mag":5.52,"ra":18.3913392,"dec":-36.23800004},
+{"mag":5.47,"ra":18.39345508,"dec":-75.04432557},
+{"mag":4.66,"ra":18.3943205,"dec":-8.93451038},
+{"mag":3.85,"ra":18.39493521,"dec":21.77034249},
+{"mag":4.98,"ra":18.39851359,"dec":58.8005852},
+{"mag":1.79,"ra":18.40287397,"dec":-34.3843146},
+{"mag":5.11,"ra":18.40383382,"dec":39.50724983},
+{"mag":5.24,"ra":18.40506689,"dec":-44.1102013},
+{"mag":5.58,"ra":18.41708688,"dec":-30.75640093},
+{"mag":4.81,"ra":18.42250987,"dec":-20.54160918},
+{"mag":5.64,"ra":18.42744481,"dec":8.0320244},
+{"mag":5.81,"ra":18.43299211,"dec":29.82898959},
+{"mag":4.82,"ra":18.43305219,"dec":65.56354628},
+{"mag":5.44,"ra":18.44833584,"dec":-48.11710875},
+{"mag":3.49,"ra":18.44956396,"dec":-45.96832919},
+{"mag":5.2,"ra":18.45347498,"dec":0.19612982},
+{"mag":5.9,"ra":18.46374565,"dec":-29.81690216},
+{"mag":2.82,"ra":18.46618597,"dec":-25.42124732},
+{"mag":5.71,"ra":18.46632604,"dec":6.19416039},
+{"mag":5.63,"ra":18.47419831,"dec":-38.9955695},
+{"mag":4.1,"ra":18.48048221,"dec":-49.07003097},
+{"mag":4.67,"ra":18.48662553,"dec":-14.56580499},
+{"mag":5.95,"ra":18.48889469,"dec":-80.23255408},
+{"mag":5.87,"ra":18.49325288,"dec":23.86620645},
+{"mag":5.38,"ra":18.49471179,"dec":-1.98522563},
+{"mag":5.65,"ra":18.49582324,"dec":77.54706964},
+{"mag":5.69,"ra":18.49886596,"dec":-47.22051319},
+{"mag":5.74,"ra":18.49907693,"dec":-57.52308279},
+{"mag":5.63,"ra":18.50328975,"dec":-18.72857432},
+{"mag":5.76,"ra":18.51790794,"dec":16.92860639},
+{"mag":5.37,"ra":18.51801255,"dec":-32.9890014},
+{"mag":4.63,"ra":18.52289626,"dec":-62.27819116},
+{"mag":5.77,"ra":18.52380356,"dec":-10.79579343},
+{"mag":5.12,"ra":18.52397242,"dec":-18.40264541},
+{"mag":4.92,"ra":18.52928779,"dec":-45.9147436},
+{"mag":5.71,"ra":18.5322844,"dec":-43.50736445},
+{"mag":5.93,"ra":18.53249682,"dec":-1.00296614},
+{"mag":5.07,"ra":18.53387342,"dec":-45.7573539},
+{"mag":5.16,"ra":18.53925187,"dec":-39.70390941},
+{"mag":4.77,"ra":18.54292285,"dec":57.04561627},
+{"mag":5.47,"ra":18.54536728,"dec":-14.8656543},
+{"mag":5.88,"ra":18.5461519,"dec":23.61677633},
+{"mag":5.47,"ra":18.54720801,"dec":30.55418062},
+{"mag":5.88,"ra":18.54870263,"dec":-73.96538378},
+{"mag":5.67,"ra":18.55642591,"dec":-38.72593259},
+{"mag":4.62,"ra":18.5583778,"dec":-42.31245871},
+{"mag":5.74,"ra":18.56083446,"dec":-14.85359142},
+{"mag":5.49,"ra":18.56485771,"dec":-24.03226534},
+{"mag":5.38,"ra":18.56574962,"dec":52.35350951},
+{"mag":5.28,"ra":18.56604577,"dec":-33.01653262},
+{"mag":5.12,"ra":18.58398986,"dec":-10.97719406},
+{"mag":3.85,"ra":18.58678829,"dec":-8.24330819},
+{"mag":5.79,"ra":18.58683042,"dec":18.20339202},
+{"mag":5.62,"ra":18.59177634,"dec":23.6055287},
+{"mag":5.38,"ra":18.60773225,"dec":9.12281663},
+{"mag":5.41,"ra":18.61037495,"dec":33.46903738},
+{"mag":5.43,"ra":18.61085908,"dec":6.67215598},
+{"mag":0.03,"ra":18.61560722,"dec":38.78299311},
+{"mag":5.74,"ra":18.62597533,"dec":62.52646287},
+{"mag":5.76,"ra":18.62665402,"dec":-0.30942411},
+{"mag":5.93,"ra":18.63178546,"dec":-21.39756504},
+{"mag":5.78,"ra":18.6418654,"dec":-23.5048456},
+{"mag":5.85,"ra":18.6481798,"dec":-21.05150199},
+{"mag":5.84,"ra":18.65396416,"dec":-47.90980354},
+{"mag":5.42,"ra":18.65977355,"dec":-43.18577561},
+{"mag":5.82,"ra":18.66677785,"dec":-7.79070788},
+{"mag":4.7,"ra":18.7045617,"dec":-9.05255357},
+{"mag":5.03,"ra":18.71054339,"dec":55.53940044},
+{"mag":4.01,"ra":18.71725939,"dec":-71.42772867},
+{"mag":4.88,"ra":18.7253445,"dec":-8.27524299},
+{"mag":5.76,"ra":18.72703299,"dec":-64.55131121},
+{"mag":5.11,"ra":18.72970586,"dec":-38.32331062},
+{"mag":5.68,"ra":18.73100396,"dec":31.92691949},
+{"mag":4.86,"ra":18.73871097,"dec":-35.64192109},
+{"mag":4.67,"ra":18.73898258,"dec":39.66997686},
+{"mag":4.59,"ra":18.73965995,"dec":39.61259557},
+{"mag":4.34,"ra":18.7462044,"dec":37.60505025},
+{"mag":5.73,"ra":18.74671939,"dec":37.59456466},
+{"mag":5.82,"ra":18.74711198,"dec":-25.01086335},
+{"mag":5.02,"ra":18.7472036,"dec":2.06007487},
+{"mag":5.4,"ra":18.74920829,"dec":-39.68617292},
+{"mag":4.78,"ra":18.75746005,"dec":-64.87089771},
+{"mag":5.82,"ra":18.75787663,"dec":5.50012301},
+{"mag":3.17,"ra":18.76093138,"dec":-26.9907794},
+{"mag":4.19,"ra":18.76103644,"dec":20.54712356},
+{"mag":5.25,"ra":18.76298795,"dec":74.08535352},
+{"mag":4.83,"ra":18.7679078,"dec":26.66207055},
+{"mag":5.37,"ra":18.77238567,"dec":-22.39218449},
+{"mag":5.37,"ra":18.77285107,"dec":75.43379735},
+{"mag":5.89,"ra":18.7746063,"dec":-0.96163956},
+{"mag":5.91,"ra":18.77863282,"dec":52.98797002},
+{"mag":5.69,"ra":18.77870114,"dec":-10.12503854},
+{"mag":4.34,"ra":18.78367287,"dec":18.18122968},
+{"mag":4.22,"ra":18.7862437,"dec":-4.74782871},
+{"mag":5.38,"ra":18.79138224,"dec":-5.70507074},
+{"mag":5.2,"ra":18.79572209,"dec":-40.40612167},
+{"mag":5.71,"ra":18.81054386,"dec":-65.07748945},
+{"mag":5.46,"ra":18.81401959,"dec":-43.67999681},
+{"mag":5.89,"ra":18.81482676,"dec":19.32877145},
+{"mag":5.8,"ra":18.82424488,"dec":-45.81023948},
+{"mag":5.6,"ra":18.82638836,"dec":-43.4340401},
+{"mag":5.22,"ra":18.8278076,"dec":-20.32474038},
+{"mag":5.99,"ra":18.82804308,"dec":-5.91283415},
+{"mag":5.93,"ra":18.82942019,"dec":32.81283298},
+{"mag":5.22,"ra":18.83136802,"dec":32.55108873},
+{"mag":3.52,"ra":18.83466497,"dec":33.36267788},
+{"mag":5.82,"ra":18.84958473,"dec":-9.77410171},
+{"mag":4.63,"ra":18.85333516,"dec":59.38828895},
+{"mag":5.51,"ra":18.85972262,"dec":52.97452091},
+{"mag":4.22,"ra":18.87028792,"dec":-62.18756062},
+{"mag":5.43,"ra":18.87123129,"dec":21.42516648},
+{"mag":5.51,"ra":18.87422387,"dec":-46.59511945},
+{"mag":5.18,"ra":18.87766837,"dec":-52.10713766},
+{"mag":4.92,"ra":18.88709481,"dec":50.70828894},
+{"mag":5.58,"ra":18.89543292,"dec":36.97172755},
+{"mag":5.68,"ra":18.9000251,"dec":-21.35979587},
+{"mag":4.86,"ra":18.90282646,"dec":-22.7448202},
+{"mag":5.64,"ra":18.90368115,"dec":27.90970126},
+{"mag":4.82,"ra":18.90660174,"dec":71.29708956},
+{"mag":4.22,"ra":18.90841352,"dec":36.89860518},
+{"mag":5.08,"ra":18.91197646,"dec":-15.60302217},
+{"mag":4.57,"ra":18.91246698,"dec":22.64507357},
+{"mag":5.84,"ra":18.91310259,"dec":48.85972353},
+{"mag":5.29,"ra":18.91323566,"dec":-87.60551487},
+{"mag":5.46,"ra":18.91449394,"dec":41.60272814},
+{"mag":5.99,"ra":18.91458911,"dec":33.96858048},
+{"mag":5.0,"ra":18.91863112,"dec":-22.67125323},
+{"mag":2.05,"ra":18.92108797,"dec":-26.29659428},
+{"mag":4.08,"ra":18.92224587,"dec":43.9458926},
+{"mag":5.58,"ra":18.92428954,"dec":6.61550576},
+{"mag":5.56,"ra":18.92528386,"dec":-16.37618751},
+{"mag":5.91,"ra":18.93352022,"dec":-23.17371793},
+{"mag":5.69,"ra":18.93504176,"dec":18.10579902},
+{"mag":4.62,"ra":18.93698898,"dec":4.20352956},
+{"mag":4.98,"ra":18.93739246,"dec":4.20205672},
+{"mag":5.35,"ra":18.93804794,"dec":-42.71060161},
+{"mag":5.62,"ra":18.94048352,"dec":65.25815397},
+{"mag":5.36,"ra":18.94458074,"dec":-37.34318339},
+{"mag":5.67,"ra":18.94585539,"dec":57.81499531},
+{"mag":4.4,"ra":18.94917796,"dec":-67.23353511},
+{"mag":5.2,"ra":18.9504082,"dec":32.90162351},
+{"mag":4.83,"ra":18.95100947,"dec":-5.84621426},
+{"mag":5.56,"ra":18.95460927,"dec":2.5353768},
+{"mag":5.02,"ra":18.95568824,"dec":-20.65633439},
+{"mag":3.52,"ra":18.96216103,"dec":-21.10662433},
+{"mag":5.89,"ra":18.96719495,"dec":38.26618277},
+{"mag":5.33,"ra":18.97076314,"dec":17.36093633},
+{"mag":4.85,"ra":18.97437645,"dec":-52.93860748},
+{"mag":5.14,"ra":18.97683186,"dec":-60.20062859},
+{"mag":4.83,"ra":18.97874276,"dec":-37.10708855},
+{"mag":5.91,"ra":18.97970098,"dec":13.90677273},
+{"mag":3.25,"ra":18.98239571,"dec":32.68955312},
+{"mag":5.27,"ra":18.98492467,"dec":13.62254853},
+{"mag":5.51,"ra":18.98994514,"dec":-12.84046242},
+{"mag":4.02,"ra":18.99371922,"dec":15.06847757},
+{"mag":5.26,"ra":18.99595238,"dec":26.23043204},
+{"mag":4.94,"ra":19.00022817,"dec":32.14549051},
+{"mag":5.98,"ra":19.00098512,"dec":-66.65351408},
+{"mag":5.39,"ra":19.00379747,"dec":50.53345884},
+{"mag":5.51,"ra":19.0120742,"dec":55.65831944},
+{"mag":5.69,"ra":19.0214881,"dec":26.29143333},
+{"mag":5.0,"ra":19.0239888,"dec":46.93502175},
+{"mag":4.02,"ra":19.02801149,"dec":-5.73901832},
+{"mag":5.63,"ra":19.04102524,"dec":-24.84639516},
+{"mag":2.6,"ra":19.04353428,"dec":-29.88011429},
+{"mag":5.4,"ra":19.04846997,"dec":-3.69900363},
+{"mag":5.96,"ra":19.05105651,"dec":-19.24565829},
+{"mag":4.74,"ra":19.05189794,"dec":-42.09499443},
+{"mag":5.73,"ra":19.05491289,"dec":-38.25318227},
+{"mag":5.89,"ra":19.05824525,"dec":-68.7555329},
+{"mag":5.82,"ra":19.05895527,"dec":1.81893472},
+{"mag":5.93,"ra":19.06597824,"dec":-51.01824471},
+{"mag":5.49,"ra":19.07362641,"dec":-31.04703255},
+{"mag":3.76,"ra":19.07803717,"dec":-21.74135451},
+{"mag":5.4,"ra":19.08199155,"dec":53.39660317},
+{"mag":5.4,"ra":19.0826832,"dec":-4.03135505},
+{"mag":5.63,"ra":19.0827287,"dec":31.74425746},
+{"mag":2.99,"ra":19.09017012,"dec":13.86370983},
+{"mag":5.93,"ra":19.09477206,"dec":-15.66039343},
+{"mag":3.43,"ra":19.10415275,"dec":-4.88233456},
+{"mag":5.17,"ra":19.10553461,"dec":-52.34063012},
+{"mag":4.23,"ra":19.10695543,"dec":-37.06275714},
+{"mag":5.53,"ra":19.1104678,"dec":28.6283896},
+{"mag":5.78,"ra":19.11065579,"dec":24.25075812},
+{"mag":5.95,"ra":19.11544314,"dec":-48.29911462},
+{"mag":3.32,"ra":19.11567841,"dec":-27.66981416},
+{"mag":5.07,"ra":19.1162787,"dec":11.07130501},
+{"mag":5.25,"ra":19.12170263,"dec":36.10016754},
+{"mag":5.2,"ra":19.12374874,"dec":32.50166027},
+{"mag":5.56,"ra":19.13797202,"dec":-19.29028615},
+{"mag":4.57,"ra":19.13914805,"dec":-40.4966376},
+{"mag":5.88,"ra":19.1405235,"dec":52.42586424},
+{"mag":5.23,"ra":19.14997707,"dec":6.07339716},
+{"mag":5.11,"ra":19.15270791,"dec":76.56079335},
+{"mag":4.11,"ra":19.15785508,"dec":-37.90423953},
+{"mag":2.88,"ra":19.1627316,"dec":-21.02352534},
+{"mag":5.31,"ra":19.16461731,"dec":-68.42434424},
+{"mag":5.86,"ra":19.16601499,"dec":-41.89222924},
+{"mag":4.1,"ra":19.16715345,"dec":-39.34070677},
+{"mag":5.13,"ra":19.19458917,"dec":56.85909594},
+{"mag":5.93,"ra":19.19611418,"dec":31.2834636},
+{"mag":5.85,"ra":19.20144876,"dec":49.85423807},
+{"mag":3.07,"ra":19.20920972,"dec":67.66131695},
+{"mag":5.35,"ra":19.21130657,"dec":-7.93950077},
+{"mag":5.79,"ra":19.2204638,"dec":-25.90676384},
+{"mag":5.51,"ra":19.22097662,"dec":-12.28250973},
+{"mag":5.14,"ra":19.22852764,"dec":2.2937137},
+{"mag":4.43,"ra":19.22930243,"dec":39.14596968},
+{"mag":5.0,"ra":19.23199019,"dec":57.70525514},
+{"mag":5.91,"ra":19.24431159,"dec":-45.19343079},
+{"mag":5.65,"ra":19.25481643,"dec":21.23209944},
+{"mag":5.58,"ra":19.25558047,"dec":15.08367864},
+{"mag":5.88,"ra":19.25689887,"dec":30.52644519},
+{"mag":4.86,"ra":19.25899921,"dec":-25.25660677},
+{"mag":4.45,"ra":19.25924825,"dec":73.35521457},
+{"mag":4.76,"ra":19.27028877,"dec":21.39044277},
+{"mag":5.38,"ra":19.27270665,"dec":-45.46606262},
+{"mag":4.35,"ra":19.27280428,"dec":38.13372778},
+{"mag":5.65,"ra":19.27410628,"dec":14.54461509},
+{"mag":5.59,"ra":19.27528416,"dec":4.83482079},
+{"mag":3.8,"ra":19.28503052,"dec":53.36816064},
+{"mag":5.52,"ra":19.28672777,"dec":-66.66103756},
+{"mag":4.88,"ra":19.29391266,"dec":-18.95288215},
+{"mag":5.46,"ra":19.29545424,"dec":23.02554904},
+{"mag":5.28,"ra":19.296944,"dec":11.59539126},
+{"mag":5.1,"ra":19.30902467,"dec":1.08508548},
+{"mag":5.53,"ra":19.32759598,"dec":12.37463918},
+{"mag":5.59,"ra":19.32777472,"dec":-35.42142487},
+{"mag":5.91,"ra":19.3377789,"dec":57.64511743},
+{"mag":4.98,"ra":19.34245505,"dec":-5.41587489},
+{"mag":5.46,"ra":19.34324532,"dec":-0.89216854},
+{"mag":5.59,"ra":19.34393218,"dec":-22.40260314},
+{"mag":4.6,"ra":19.34446443,"dec":65.7144303},
+{"mag":3.92,"ra":19.36121535,"dec":-17.84725155},
+{"mag":4.52,"ra":19.36211722,"dec":-15.95500233},
+{"mag":5.84,"ra":19.36412019,"dec":-18.30816237},
+{"mag":5.81,"ra":19.37264162,"dec":-0.25227829},
+{"mag":3.96,"ra":19.37730181,"dec":-44.45891013},
+{"mag":5.22,"ra":19.38080138,"dec":26.2624297},
+{"mag":5.03,"ra":19.38088349,"dec":-54.42372882},
+{"mag":4.27,"ra":19.38696127,"dec":-44.79964788},
+{"mag":3.96,"ra":19.3980976,"dec":-40.61564629},
+{"mag":5.85,"ra":19.39902462,"dec":43.3882371},
+{"mag":4.99,"ra":19.40210326,"dec":29.6213112},
+{"mag":5.17,"ra":19.4160473,"dec":11.94285122},
+{"mag":5.91,"ra":19.41779193,"dec":-29.30920884},
+{"mag":5.02,"ra":19.42123628,"dec":-24.50844892},
+{"mag":5.72,"ra":19.42265613,"dec":-13.89726417},
+{"mag":5.14,"ra":19.42459542,"dec":19.79853912},
+{"mag":5.45,"ra":19.42490874,"dec":-23.96242415},
+{"mag":3.36,"ra":19.42493129,"dec":3.11457923},
+{"mag":5.17,"ra":19.43586774,"dec":36.31786478},
+{"mag":5.71,"ra":19.43639764,"dec":-15.05325005},
+{"mag":5.6,"ra":19.43701223,"dec":20.09782036},
+{"mag":5.57,"ra":19.43864824,"dec":-21.77668185},
+{"mag":5.76,"ra":19.44003514,"dec":13.02365808},
+{"mag":5.84,"ra":19.44130185,"dec":19.89161003},
+{"mag":4.64,"ra":19.44196935,"dec":0.33857566},
+{"mag":5.66,"ra":19.44901951,"dec":-29.74310537},
+{"mag":5.73,"ra":19.45721404,"dec":52.32050263},
+{"mag":5.7,"ra":19.46336742,"dec":-54.32529723},
+{"mag":5.84,"ra":19.47244353,"dec":2.9300672},
+{"mag":4.44,"ra":19.4784475,"dec":24.66516482},
+{"mag":5.82,"ra":19.48252154,"dec":24.76868131},
+{"mag":5.79,"ra":19.48360792,"dec":1.95052861},
+{"mag":5.57,"ra":19.48947892,"dec":14.59607671},
+{"mag":5.7,"ra":19.48993637,"dec":-43.44491571},
+{"mag":3.76,"ra":19.49509425,"dec":51.72946747},
+{"mag":5.46,"ra":19.49782566,"dec":-26.9855106},
+{"mag":5.03,"ra":19.51106221,"dec":-2.78886135},
+{"mag":3.05,"ra":19.51202368,"dec":27.9596948},
+{"mag":5.12,"ra":19.51261019,"dec":27.9652789},
+{"mag":5.98,"ra":19.51970638,"dec":-68.43388713},
+{"mag":5.55,"ra":19.5220443,"dec":50.30659451},
+{"mag":5.89,"ra":19.52267061,"dec":26.61710997},
+{"mag":4.74,"ra":19.52953362,"dec":34.45297707},
+{"mag":4.67,"ra":19.53905179,"dec":69.66540172},
+{"mag":5.76,"ra":19.54827503,"dec":-53.18560103},
+{"mag":5.59,"ra":19.55600951,"dec":-45.27168903},
+{"mag":4.45,"ra":19.56811881,"dec":7.37931918},
+{"mag":5.89,"ra":19.56902283,"dec":-40.03463308},
+{"mag":5.71,"ra":19.57215572,"dec":51.23707706},
+{"mag":5.0,"ra":19.57635776,"dec":19.77339742},
+{"mag":5.34,"ra":19.57812701,"dec":42.41258465},
+{"mag":5.39,"ra":19.58081072,"dec":29.46291111},
+{"mag":5.12,"ra":19.58534812,"dec":-10.56043644},
+{"mag":4.88,"ra":19.58694271,"dec":-48.09911061},
+{"mag":5.64,"ra":19.60045817,"dec":-24.71901737},
+{"mag":4.49,"ra":19.60737289,"dec":50.22046347},
+{"mag":5.17,"ra":19.61057074,"dec":44.69518822},
+{"mag":4.59,"ra":19.61177473,"dec":-24.88356664},
+{"mag":4.36,"ra":19.61202126,"dec":-1.28655047},
+{"mag":5.98,"ra":19.61456861,"dec":11.27319815},
+{"mag":4.93,"ra":19.61484682,"dec":-7.02747069},
+{"mag":5.66,"ra":19.61759294,"dec":-18.23101861},
+{"mag":5.67,"ra":19.62149533,"dec":16.46276921},
+{"mag":5.46,"ra":19.62624352,"dec":-14.30144432},
+{"mag":5.45,"ra":19.62979344,"dec":-4.64750966},
+{"mag":5.89,"ra":19.64476324,"dec":54.973395},
+{"mag":5.18,"ra":19.65323339,"dec":5.39778241},
+{"mag":4.68,"ra":19.65627897,"dec":30.1532335},
+{"mag":5.41,"ra":19.65735179,"dec":42.81821158},
+{"mag":4.39,"ra":19.66827292,"dec":18.01393839},
+{"mag":5.97,"ra":19.66865192,"dec":-23.42905463},
+{"mag":5.64,"ra":19.67869802,"dec":-0.6212928},
+{"mag":5.3,"ra":19.67870589,"dec":-16.29314555},
+{"mag":5.06,"ra":19.68058707,"dec":45.5246494},
+{"mag":4.39,"ra":19.68414825,"dec":17.47612356},
+{"mag":5.98,"ra":19.68486896,"dec":13.81570826},
+{"mag":5.99,"ra":19.69696917,"dec":50.52544635},
+{"mag":5.06,"ra":19.70863683,"dec":-16.12397392},
+{"mag":5.28,"ra":19.70944646,"dec":11.8266084},
+{"mag":5.93,"ra":19.71239015,"dec":32.42674436},
+{"mag":5.49,"ra":19.72595783,"dec":-15.46965541},
+{"mag":5.5,"ra":19.72858823,"dec":25.77187257},
+{"mag":5.86,"ra":19.72918941,"dec":41.77308397},
+{"mag":4.89,"ra":19.737931,"dec":37.35426967},
+{"mag":5.9,"ra":19.73844489,"dec":69.33711857},
+{"mag":2.86,"ra":19.74956725,"dec":45.13069195},
+{"mag":5.89,"ra":19.76108771,"dec":7.61315784},
+{"mag":5.51,"ra":19.76700442,"dec":-31.90853854},
+{"mag":2.72,"ra":19.77099171,"dec":10.61326869},
+{"mag":4.87,"ra":19.77272756,"dec":-19.76089482},
+{"mag":5.0,"ra":19.7737733,"dec":33.72868813},
+{"mag":3.68,"ra":19.78979589,"dec":18.53425912},
+{"mag":5.83,"ra":19.79104896,"dec":38.40761671},
+{"mag":5.33,"ra":19.80030601,"dec":-56.36227755},
+{"mag":3.84,"ra":19.8028371,"dec":70.26783533},
+{"mag":5.75,"ra":19.81168001,"dec":11.81592014},
+{"mag":5.01,"ra":19.81629133,"dec":19.14197806},
+{"mag":5.39,"ra":19.82369246,"dec":-72.50341408},
+{"mag":5.91,"ra":19.83723673,"dec":-47.55736033},
+{"mag":5.18,"ra":19.84277401,"dec":38.72216211},
+{"mag":5.68,"ra":19.84370254,"dec":40.599778},
+{"mag":5.03,"ra":19.84381492,"dec":52.98816657},
+{"mag":5.41,"ra":19.84577133,"dec":-59.19363715},
+{"mag":0.76,"ra":19.84630057,"dec":8.86738491},
+{"mag":5.38,"ra":19.84633416,"dec":-10.76358902},
+{"mag":5.12,"ra":19.85041673,"dec":10.4160539},
+{"mag":4.9,"ra":19.85113712,"dec":22.61008676},
+{"mag":5.32,"ra":19.86405282,"dec":-39.87433805},
+{"mag":5.6,"ra":19.86640879,"dec":47.02734867},
+{"mag":5.54,"ra":19.86710947,"dec":24.99217156},
+{"mag":5.91,"ra":19.86865875,"dec":47.93181856},
+{"mag":5.88,"ra":19.8700014,"dec":-19.04486185},
+{"mag":3.87,"ra":19.8745455,"dec":1.00567827},
+{"mag":5.76,"ra":19.87713947,"dec":-54.97103652},
+{"mag":5.14,"ra":19.88815858,"dec":57.52346329},
+{"mag":5.63,"ra":19.8885342,"dec":-3.11449682},
+{"mag":4.57,"ra":19.89102245,"dec":24.07952568},
+{"mag":5.76,"ra":19.90229793,"dec":-8.57416489},
+{"mag":4.71,"ra":19.90411715,"dec":8.46165027},
+{"mag":5.56,"ra":19.90862814,"dec":24.31939041},
+{"mag":5.7,"ra":19.91045767,"dec":-8.22722614},
+{"mag":5.6,"ra":19.91243674,"dec":0.27365959},
+{"mag":5.79,"ra":19.91340074,"dec":36.99565531},
+{"mag":4.12,"ra":19.92102196,"dec":-41.8684135},
+{"mag":3.71,"ra":19.92187948,"dec":6.40793334},
+{"mag":4.91,"ra":19.92717285,"dec":52.43902327},
+{"mag":4.7,"ra":19.93061806,"dec":-26.29968718},
+{"mag":4.95,"ra":19.93104478,"dec":38.48670392},
+{"mag":4.98,"ra":19.9320523,"dec":58.84601982},
+{"mag":5.71,"ra":19.93368426,"dec":16.6348159},
+{"mag":5.28,"ra":19.93728685,"dec":11.42370978},
+{"mag":3.89,"ra":19.93844337,"dec":35.08349079},
+{"mag":4.54,"ra":19.94911802,"dec":-27.1698625},
+{"mag":5.24,"ra":19.95174539,"dec":-58.90131541},
+{"mag":5.46,"ra":19.9538507,"dec":40.36782505},
+{"mag":5.54,"ra":19.96262183,"dec":16.78911537},
+{"mag":5.01,"ra":19.96583898,"dec":-15.49126255},
+{"mag":5.51,"ra":19.97721077,"dec":30.98367174},
+{"mag":5.74,"ra":19.97810497,"dec":-69.16371251},
+{"mag":3.51,"ra":19.97927434,"dec":19.49209287},
+{"mag":4.84,"ra":19.98254898,"dec":-26.19582739},
+{"mag":5.68,"ra":19.98627299,"dec":23.10127381},
+{"mag":5.92,"ra":19.98900416,"dec":45.77258164},
+{"mag":4.37,"ra":19.99560397,"dec":-35.27624433},
+{"mag":5.87,"ra":19.99652483,"dec":-9.95728408},
+{"mag":5.3,"ra":19.99757777,"dec":-34.69763103},
+{"mag":5.15,"ra":19.99866531,"dec":37.04288602},
+{"mag":5.33,"ra":20.0009187,"dec":17.51654077},
+{"mag":5.95,"ra":20.00442182,"dec":-37.70171669},
+{"mag":5.65,"ra":20.00559967,"dec":-33.7027487},
+{"mag":5.75,"ra":20.00641847,"dec":-66.94888773},
+{"mag":3.97,"ra":20.00983148,"dec":-72.91018443},
+{"mag":5.8,"ra":20.01342323,"dec":-45.1129325},
+{"mag":5.9,"ra":20.01638085,"dec":8.5577688},
+{"mag":4.66,"ra":20.01833614,"dec":27.75356392},
+{"mag":5.06,"ra":20.02265235,"dec":50.10467998},
+{"mag":5.22,"ra":20.02459214,"dec":64.82100457},
+{"mag":5.88,"ra":20.02908519,"dec":24.80042535},
+{"mag":4.95,"ra":20.02908951,"dec":-59.37582804},
+{"mag":5.32,"ra":20.03122335,"dec":-66.94379223},
+{"mag":5.69,"ra":20.03293811,"dec":-13.63724241},
+{"mag":5.23,"ra":20.03371501,"dec":24.93787365},
+{"mag":4.43,"ra":20.04429424,"dec":-27.70987972},
+{"mag":4.51,"ra":20.04695756,"dec":67.87344872},
+{"mag":5.99,"ra":20.05455354,"dec":18.50104063},
+{"mag":5.73,"ra":20.05833686,"dec":16.03127337},
+{"mag":4.77,"ra":20.05928093,"dec":-37.94049103},
+{"mag":5.73,"ra":20.0602627,"dec":29.89807932},
+{"mag":5.8,"ra":20.06846253,"dec":17.07116105},
+{"mag":5.51,"ra":20.06897411,"dec":7.27793427},
+{"mag":4.99,"ra":20.07210082,"dec":-32.05626941},
+{"mag":5.67,"ra":20.07309807,"dec":-0.70902114},
+{"mag":5.62,"ra":20.07671575,"dec":32.21862467},
+{"mag":5.09,"ra":20.08596517,"dec":19.99087704},
+{"mag":5.4,"ra":20.09242365,"dec":61.99524822},
+{"mag":5.81,"ra":20.10378856,"dec":53.16506746},
+{"mag":5.38,"ra":20.10609148,"dec":35.97353894},
+{"mag":5.08,"ra":20.11483274,"dec":23.61442409},
+{"mag":4.93,"ra":20.12310238,"dec":-52.88080972},
+{"mag":5.97,"ra":20.13382082,"dec":-0.67802026},
+{"mag":3.55,"ra":20.14496114,"dec":-66.17932101},
+{"mag":4.38,"ra":20.14814344,"dec":77.71136178},
+{"mag":4.93,"ra":20.15711576,"dec":36.83959003},
+{"mag":5.51,"ra":20.17597912,"dec":26.90413736},
+{"mag":5.32,"ra":20.18655784,"dec":-36.09738423},
+{"mag":3.24,"ra":20.18840688,"dec":-0.82147569},
+{"mag":5.7,"ra":20.1929845,"dec":62.07834754},
+{"mag":5.51,"ra":20.19665933,"dec":26.80901561},
+{"mag":5.91,"ra":20.20019405,"dec":26.47883104},
+{"mag":5.84,"ra":20.20715424,"dec":-12.61702214},
+{"mag":5.44,"ra":20.22051872,"dec":-1.00926621},
+{"mag":4.8,"ra":20.22167833,"dec":46.81567038},
+{"mag":4.28,"ra":20.22327809,"dec":56.56752223},
+{"mag":5.81,"ra":20.22432478,"dec":60.6404332},
+{"mag":3.8,"ra":20.22719518,"dec":46.74132417},
+{"mag":5.19,"ra":20.23736696,"dec":28.69486353},
+{"mag":4.94,"ra":20.23794044,"dec":15.19746767},
+{"mag":5.65,"ra":20.23861323,"dec":-52.44564171},
+{"mag":4.93,"ra":20.24221735,"dec":36.8061354},
+{"mag":4.79,"ra":20.25441415,"dec":25.59196924},
+{"mag":5.73,"ra":20.25460498,"dec":-27.03253576},
+{"mag":5.7,"ra":20.25660872,"dec":33.7293702},
+{"mag":3.96,"ra":20.25786618,"dec":47.7142053},
+{"mag":5.18,"ra":20.25839923,"dec":23.50892242},
+{"mag":4.5,"ra":20.2628215,"dec":27.8142285},
+{"mag":5.87,"ra":20.26683531,"dec":45.57965867},
+{"mag":5.3,"ra":20.27974349,"dec":24.67114227},
+{"mag":5.27,"ra":20.28202333,"dec":40.3650796},
+{"mag":5.91,"ra":20.29184236,"dec":66.85296587},
+{"mag":4.3,"ra":20.29412669,"dec":-12.50821403},
+{"mag":4.77,"ra":20.29644567,"dec":38.0329471},
+{"mag":5.86,"ra":20.30038201,"dec":-21.80990013},
+{"mag":3.58,"ra":20.30089401,"dec":-12.54485877},
+{"mag":5.83,"ra":20.30194167,"dec":40.73209817},
+{"mag":5.76,"ra":20.30687723,"dec":55.3971705},
+{"mag":5.58,"ra":20.30795165,"dec":36.9997539},
+{"mag":5.14,"ra":20.31085273,"dec":34.98278431},
+{"mag":5.28,"ra":20.32322201,"dec":-19.1185068},
+{"mag":5.71,"ra":20.32686046,"dec":62.25741351},
+{"mag":5.96,"ra":20.33338644,"dec":13.54810109},
+{"mag":5.59,"ra":20.33499547,"dec":68.8802532},
+{"mag":5.82,"ra":20.33927682,"dec":17.79300261},
+{"mag":4.77,"ra":20.34439076,"dec":-12.75904403},
+{"mag":3.05,"ra":20.35017956,"dec":-14.78140119},
+{"mag":5.69,"ra":20.3531991,"dec":63.98008727},
+{"mag":5.5,"ra":20.36761931,"dec":24.44611603},
+{"mag":5.58,"ra":20.36815185,"dec":45.79489737},
+{"mag":2.23,"ra":20.37047223,"dec":40.2566815},
+{"mag":5.6,"ra":20.37429983,"dec":-42.04934895},
+{"mag":5.95,"ra":20.37924859,"dec":41.02613288},
+{"mag":5.3,"ra":20.38630816,"dec":5.34307747},
+{"mag":5.87,"ra":20.39565702,"dec":37.47644822},
+{"mag":4.43,"ra":20.39766555,"dec":32.19018607},
+{"mag":5.64,"ra":20.39810748,"dec":-42.42290463},
+{"mag":5.86,"ra":20.42411677,"dec":-28.66327932},
+{"mag":1.94,"ra":20.42745823,"dec":-56.73488071},
+{"mag":5.68,"ra":20.4279233,"dec":21.40966274},
+{"mag":5.73,"ra":20.45061272,"dec":49.38322449},
+{"mag":5.08,"ra":20.4553343,"dec":-18.21169433},
+{"mag":5.63,"ra":20.4595208,"dec":38.44052275},
+{"mag":5.38,"ra":20.47068179,"dec":81.42266925},
+{"mag":4.77,"ra":20.48100657,"dec":-17.81366828},
+{"mag":5.9,"ra":20.48899682,"dec":36.45473284},
+{"mag":4.01,"ra":20.48992526,"dec":30.36855661},
+{"mag":5.89,"ra":20.49086278,"dec":56.06817898},
+{"mag":5.96,"ra":20.49092048,"dec":81.09073843},
+{"mag":4.21,"ra":20.49300758,"dec":62.99413722},
+{"mag":4.91,"ra":20.49415518,"dec":-2.8854763},
+{"mag":5.94,"ra":20.49830328,"dec":-18.58298474},
+{"mag":4.94,"ra":20.50098104,"dec":48.95155039},
+{"mag":5.44,"ra":20.52189123,"dec":49.2203733},
+{"mag":5.18,"ra":20.52511079,"dec":74.95465942},
+{"mag":5.66,"ra":20.53986486,"dec":-9.85364143},
+{"mag":4.03,"ra":20.55354577,"dec":11.30333217},
+{"mag":5.76,"ra":20.55489244,"dec":-80.96482633},
+{"mag":4.61,"ra":20.56505228,"dec":35.25086482},
+{"mag":5.78,"ra":20.56523212,"dec":46.69386159},
+{"mag":5.12,"ra":20.5652953,"dec":-44.51596141},
+{"mag":5.39,"ra":20.56583246,"dec":13.02720146},
+{"mag":4.64,"ra":20.58847449,"dec":14.67418482},
+{"mag":4.75,"ra":20.59299116,"dec":-60.58129819},
+{"mag":4.91,"ra":20.61211862,"dec":-2.54991814},
+{"mag":5.59,"ra":20.61796183,"dec":26.46197499},
+{"mag":3.64,"ra":20.62579715,"dec":14.59520289},
+{"mag":3.11,"ra":20.62610824,"dec":-47.29166239},
+{"mag":4.86,"ra":20.62645548,"dec":-61.52974415},
+{"mag":5.42,"ra":20.63030446,"dec":11.37769664},
+{"mag":5.89,"ra":20.63850137,"dec":-81.28897011},
+{"mag":4.31,"ra":20.63896486,"dec":-1.10507951},
+{"mag":4.81,"ra":20.64202565,"dec":21.20117964},
+{"mag":5.06,"ra":20.64219673,"dec":24.11597742},
+{"mag":5.91,"ra":20.64305234,"dec":23.68050731},
+{"mag":5.69,"ra":20.64555131,"dec":13.31512567},
+{"mag":5.68,"ra":20.64987099,"dec":30.33442469},
+{"mag":5.99,"ra":20.65138016,"dec":15.83823558},
+{"mag":5.07,"ra":20.65210902,"dec":10.08615196},
+{"mag":5.24,"ra":20.65453229,"dec":-14.95471233},
+{"mag":5.15,"ra":20.65689762,"dec":0.4864919},
+{"mag":3.77,"ra":20.66062626,"dec":15.9120527},
+{"mag":5.11,"ra":20.66729623,"dec":-60.54750937},
+{"mag":5.15,"ra":20.66748847,"dec":-18.1386063},
+{"mag":5.97,"ra":20.66755992,"dec":43.4590163},
+{"mag":5.47,"ra":20.67217015,"dec":-33.43193038},
+{"mag":5.79,"ra":20.67571097,"dec":-16.12435941},
+{"mag":5.53,"ra":20.68403891,"dec":32.30731586},
+{"mag":5.75,"ra":20.689884,"dec":-31.59814237},
+{"mag":1.25,"ra":20.69053151,"dec":45.28033423},
+{"mag":5.68,"ra":20.69902716,"dec":41.71687197},
+{"mag":5.14,"ra":20.69918418,"dec":-66.76062542},
+{"mag":5.99,"ra":20.70070031,"dec":-76.18056892},
+{"mag":5.41,"ra":20.70350743,"dec":50.34002067},
+{"mag":5.75,"ra":20.70974994,"dec":82.53110584},
+{"mag":5.59,"ra":20.71971766,"dec":66.65736293},
+{"mag":4.43,"ra":20.72431825,"dec":15.07468224},
+{"mag":4.51,"ra":20.73394074,"dec":-51.92084051},
+{"mag":5.91,"ra":20.73945579,"dec":56.48840856},
+{"mag":4.92,"ra":20.74792311,"dec":25.27104823},
+{"mag":3.42,"ra":20.74932102,"dec":-66.20323826},
+{"mag":3.41,"ra":20.75479684,"dec":61.83679404},
+{"mag":4.52,"ra":20.75588795,"dec":57.58029799},
+{"mag":4.22,"ra":20.7610442,"dec":30.7196568},
+{"mag":4.13,"ra":20.76826836,"dec":-25.27051682},
+{"mag":5.91,"ra":20.76943714,"dec":-21.51399111},
+{"mag":2.48,"ra":20.77012006,"dec":33.96945334},
+{"mag":5.48,"ra":20.772231,"dec":-39.19918925},
+{"mag":5.15,"ra":20.77746325,"dec":16.12462394},
+{"mag":4.27,"ra":20.77764388,"dec":16.12477326},
+{"mag":4.93,"ra":20.78631233,"dec":34.37410329},
+{"mag":4.53,"ra":20.79014637,"dec":36.49073658},
+{"mag":5.36,"ra":20.79265458,"dec":80.55235152},
+{"mag":3.78,"ra":20.79459238,"dec":-9.49568988},
+{"mag":4.43,"ra":20.79562164,"dec":-5.02760303},
+{"mag":5.57,"ra":20.7967578,"dec":6.00824104},
+{"mag":5.6,"ra":20.79702614,"dec":47.83191224},
+{"mag":5.11,"ra":20.80805543,"dec":-43.98827127},
+{"mag":4.81,"ra":20.81563705,"dec":46.11414081},
+{"mag":5.86,"ra":20.82155707,"dec":-25.78119469},
+{"mag":5.41,"ra":20.82174308,"dec":-68.77640032},
+{"mag":4.9,"ra":20.82470255,"dec":-46.22689249},
+{"mag":4.89,"ra":20.83279986,"dec":-33.7796732},
+{"mag":5.06,"ra":20.83467543,"dec":44.0589822},
+{"mag":5.87,"ra":20.84491712,"dec":-12.54472977},
+{"mag":5.52,"ra":20.85021199,"dec":-37.91328991},
+{"mag":5.99,"ra":20.85713671,"dec":-5.6266358},
+{"mag":5.66,"ra":20.85784315,"dec":28.25051868},
+{"mag":5.06,"ra":20.8583472,"dec":-51.60816692},
+{"mag":5.67,"ra":20.86066754,"dec":-62.42921513},
+{"mag":4.12,"ra":20.86369338,"dec":-26.91912642},
+{"mag":4.56,"ra":20.86881265,"dec":27.09712771},
+{"mag":5.55,"ra":20.86908142,"dec":-5.50704421},
+{"mag":4.73,"ra":20.87755716,"dec":-8.98323782},
+{"mag":4.8,"ra":20.88742924,"dec":44.38726652},
+{"mag":5.48,"ra":20.88848851,"dec":45.18168341},
+{"mag":5.34,"ra":20.89448671,"dec":-39.80962825},
+{"mag":5.47,"ra":20.89830736,"dec":33.43780855},
+{"mag":5.03,"ra":20.90934366,"dec":28.05763154},
+{"mag":5.99,"ra":20.91229875,"dec":75.92546706},
+{"mag":5.78,"ra":20.91329232,"dec":-17.92285285},
+{"mag":3.67,"ra":20.91349433,"dec":-58.4540947},
+{"mag":5.19,"ra":20.92685526,"dec":13.72156383},
+{"mag":5.54,"ra":20.92737588,"dec":12.56850687},
+{"mag":5.68,"ra":20.93050165,"dec":47.41766542},
+{"mag":5.83,"ra":20.94039999,"dec":50.72864966},
+{"mag":5.92,"ra":20.94052435,"dec":49.19583069},
+{"mag":5.96,"ra":20.9429939,"dec":44.92472729},
+{"mag":5.7,"ra":20.94646394,"dec":-26.29621951},
+{"mag":5.49,"ra":20.94834162,"dec":-9.69751669},
+{"mag":3.94,"ra":20.95289212,"dec":41.16719384},
+{"mag":5.89,"ra":20.96128156,"dec":-16.03154355},
+{"mag":5.3,"ra":20.97120911,"dec":22.32591754},
+{"mag":5.55,"ra":20.97205045,"dec":44.47154114},
+{"mag":5.51,"ra":20.9738786,"dec":10.8393695},
+{"mag":5.59,"ra":20.9750071,"dec":50.46178308},
+{"mag":5.95,"ra":20.97829804,"dec":-14.48308081},
+{"mag":5.3,"ra":20.98459526,"dec":4.29384672},
+{"mag":5.24,"ra":20.98477135,"dec":4.29497561},
+{"mag":5.54,"ra":20.99037016,"dec":59.43855678},
+{"mag":4.74,"ra":20.99709729,"dec":47.52094507},
+{"mag":5.98,"ra":21.0010983,"dec":7.51617986},
+{"mag":5.76,"ra":21.00599004,"dec":-51.26563421},
+{"mag":5.69,"ra":21.00769385,"dec":19.32972583},
+{"mag":5.38,"ra":21.01970068,"dec":46.15576488},
+{"mag":4.67,"ra":21.02151713,"dec":-32.25776681},
+{"mag":5.83,"ra":21.03583234,"dec":56.66961137},
+{"mag":5.93,"ra":21.04084786,"dec":-38.53055847},
+{"mag":5.32,"ra":21.0494374,"dec":-38.63118269},
+{"mag":5.93,"ra":21.06321801,"dec":53.28582252},
+{"mag":5.53,"ra":21.06797567,"dec":-5.82304908},
+{"mag":4.82,"ra":21.0734235,"dec":-19.85493122},
+{"mag":5.63,"ra":21.07628991,"dec":5.50286035},
+{"mag":5.13,"ra":21.07861906,"dec":-77.02286938},
+{"mag":3.72,"ra":21.08218216,"dec":43.92785122},
+{"mag":5.17,"ra":21.087287,"dec":-54.72695035},
+{"mag":5.94,"ra":21.09077468,"dec":5.95848857},
+{"mag":5.91,"ra":21.09144741,"dec":78.12632222},
+{"mag":4.08,"ra":21.09910538,"dec":-17.23271095},
+{"mag":5.69,"ra":21.10031208,"dec":-30.12495361},
+{"mag":5.88,"ra":21.10649798,"dec":71.43207905},
+{"mag":5.2,"ra":21.10685587,"dec":-32.34163849},
+{"mag":5.55,"ra":21.10708261,"dec":-41.38593603},
+{"mag":5.77,"ra":21.10840047,"dec":31.18466842},
+{"mag":4.56,"ra":21.11002448,"dec":47.64840597},
+{"mag":5.2,"ra":21.11412083,"dec":38.74149446},
+{"mag":4.49,"ra":21.11880151,"dec":-25.00574796},
+{"mag":5.75,"ra":21.14241805,"dec":-63.92827112},
+{"mag":5.3,"ra":21.14267025,"dec":-21.19352539},
+{"mag":5.6,"ra":21.14413133,"dec":30.20568797},
+{"mag":5.45,"ra":21.14611503,"dec":-88.9565112},
+{"mag":5.67,"ra":21.15597694,"dec":-73.17226994},
+{"mag":4.5,"ra":21.15988689,"dec":-11.37165474},
+{"mag":5.75,"ra":21.17098684,"dec":53.56310952},
+{"mag":4.7,"ra":21.17235307,"dec":10.13194861},
+{"mag":5.64,"ra":21.19673346,"dec":59.98661923},
+{"mag":5.83,"ra":21.2037967,"dec":-40.2688284},
+{"mag":3.21,"ra":21.21560598,"dec":30.22708128},
+{"mag":5.25,"ra":21.21747985,"dec":-39.42464394},
+{"mag":5.41,"ra":21.22146311,"dec":-27.61905854},
+{"mag":5.97,"ra":21.22192701,"dec":-36.42353599},
+{"mag":5.06,"ra":21.222344,"dec":-70.12621725},
+{"mag":4.47,"ra":21.24133058,"dec":10.00771855},
+{"mag":3.74,"ra":21.24648517,"dec":38.04432043},
+{"mag":5.17,"ra":21.26052514,"dec":-20.65169052},
+{"mag":5.92,"ra":21.26177546,"dec":77.01226067},
+{"mag":5.31,"ra":21.26245211,"dec":-15.17151251},
+{"mag":5.73,"ra":21.26273229,"dec":-53.26304998},
+{"mag":3.92,"ra":21.26372131,"dec":5.2480739},
+{"mag":4.22,"ra":21.29026459,"dec":39.39469016},
+{"mag":4.41,"ra":21.29862997,"dec":34.8968812},
+{"mag":4.71,"ra":21.29895737,"dec":-32.17248551},
+{"mag":5.4,"ra":21.29924349,"dec":-17.98513635},
+{"mag":5.83,"ra":21.30307388,"dec":-4.51951158},
+{"mag":5.04,"ra":21.30755046,"dec":43.9459669},
+{"mag":2.45,"ra":21.30960598,"dec":62.58545529},
+{"mag":5.97,"ra":21.31444811,"dec":11.20333527},
+{"mag":5.51,"ra":21.32102554,"dec":58.62350994},
+{"mag":5.89,"ra":21.32282787,"dec":38.23748156},
+{"mag":5.19,"ra":21.32283696,"dec":64.87184231},
+{"mag":5.75,"ra":21.3246493,"dec":49.5102892},
+{"mag":4.39,"ra":21.33107883,"dec":-53.44926434},
+{"mag":4.8,"ra":21.34599543,"dec":-40.80950852},
+{"mag":5.58,"ra":21.35117748,"dec":23.85625829},
+{"mag":5.87,"ra":21.35120161,"dec":-4.56015214},
+{"mag":5.81,"ra":21.35133348,"dec":7.3545461},
+{"mag":5.68,"ra":21.36677355,"dec":49.38869874},
+{"mag":4.08,"ra":21.36809274,"dec":19.80435581},
+{"mag":4.28,"ra":21.3707715,"dec":-16.83455521},
+{"mag":5.16,"ra":21.38155049,"dec":6.81111338},
+{"mag":5.99,"ra":21.38229762,"dec":-9.31927297},
+{"mag":5.63,"ra":21.3834643,"dec":-22.66904892},
+{"mag":5.7,"ra":21.39965003,"dec":24.27409155},
+{"mag":5.38,"ra":21.40266615,"dec":-20.85156019},
+{"mag":5.48,"ra":21.40317736,"dec":-12.8781302},
+{"mag":5.76,"ra":21.40688855,"dec":-41.00669489},
+{"mag":5.67,"ra":21.40943711,"dec":26.17454472},
+{"mag":5.97,"ra":21.41372248,"dec":80.52485397},
+{"mag":5.71,"ra":21.42028258,"dec":-9.74814011},
+{"mag":5.48,"ra":21.42137914,"dec":-3.55657786},
+{"mag":5.59,"ra":21.4220523,"dec":46.71422433},
+{"mag":5.93,"ra":21.42972782,"dec":36.66740768},
+{"mag":5.64,"ra":21.43965281,"dec":-37.82940289},
+{"mag":4.21,"ra":21.44069225,"dec":-65.36814438},
+{"mag":3.77,"ra":21.44445214,"dec":-22.41137838},
+{"mag":5.29,"ra":21.44765832,"dec":48.83510521},
+{"mag":5.5,"ra":21.45046159,"dec":-42.54796563},
+{"mag":5.78,"ra":21.45412074,"dec":-21.19612774},
+{"mag":5.3,"ra":21.45593451,"dec":37.11679196},
+{"mag":5.39,"ra":21.46111944,"dec":27.60854356},
+{"mag":5.42,"ra":21.46282148,"dec":66.80914613},
+{"mag":5.75,"ra":21.468933,"dec":32.22513677},
+{"mag":3.23,"ra":21.47765973,"dec":70.56069481},
+{"mag":4.5,"ra":21.47869889,"dec":-21.80716659},
+{"mag":5.47,"ra":21.47910758,"dec":-69.5052732},
+{"mag":5.84,"ra":21.48326586,"dec":22.179404},
+{"mag":5.22,"ra":21.49080919,"dec":46.54033179},
+{"mag":4.52,"ra":21.49913323,"dec":23.63882922},
+{"mag":5.53,"ra":21.51647046,"dec":60.45944015},
+{"mag":2.9,"ra":21.52597796,"dec":-5.57115593},
+{"mag":5.29,"ra":21.53496142,"dec":-41.1793364},
+{"mag":5.97,"ra":21.53738196,"dec":-33.94461293},
+{"mag":5.77,"ra":21.54904936,"dec":49.97760064},
+{"mag":5.57,"ra":21.55653693,"dec":-44.8486946},
+{"mag":3.98,"ra":21.56635357,"dec":45.59206564},
+{"mag":4.87,"ra":21.57957705,"dec":38.53382684},
+{"mag":5.7,"ra":21.58085251,"dec":-20.08438179},
+{"mag":5.79,"ra":21.58822953,"dec":-3.98329291},
+{"mag":5.96,"ra":21.60067837,"dec":45.37458683},
+{"mag":5.73,"ra":21.60302888,"dec":-26.17145712},
+{"mag":5.04,"ra":21.61582695,"dec":40.41349052},
+{"mag":4.51,"ra":21.61800632,"dec":-19.46601352},
+{"mag":4.68,"ra":21.62917834,"dec":-7.85414212},
+{"mag":5.46,"ra":21.62926898,"dec":19.31857481},
+{"mag":4.76,"ra":21.63200744,"dec":62.08194667},
+{"mag":5.66,"ra":21.64218715,"dec":5.77167281},
+{"mag":5.74,"ra":21.64933895,"dec":57.48904968},
+{"mag":5.77,"ra":21.65030906,"dec":20.26545357},
+{"mag":5.1,"ra":21.6592458,"dec":2.24376298},
+{"mag":3.69,"ra":21.66815062,"dec":-16.66225343},
+{"mag":5.09,"ra":21.66973916,"dec":43.27380044},
+{"mag":3.73,"ra":21.69124253,"dec":-77.38946215},
+{"mag":5.16,"ra":21.69248133,"dec":-14.0468604},
+{"mag":4.55,"ra":21.69863224,"dec":71.31118695},
+{"mag":5.24,"ra":21.70017747,"dec":-23.26262557},
+{"mag":5.98,"ra":21.70030002,"dec":35.51019572},
+{"mag":4.69,"ra":21.70157213,"dec":51.1896271},
+{"mag":5.66,"ra":21.7028098,"dec":1.28527344},
+{"mag":5.3,"ra":21.70429027,"dec":5.68015144},
+{"mag":5.73,"ra":21.7063724,"dec":41.07702304},
+{"mag":4.72,"ra":21.71094923,"dec":-18.86630105},
+{"mag":5.18,"ra":21.71781267,"dec":72.32018258},
+{"mag":5.88,"ra":21.71788896,"dec":-14.39975885},
+{"mag":5.51,"ra":21.71846745,"dec":41.15499969},
+{"mag":5.69,"ra":21.72378525,"dec":38.28360055},
+{"mag":4.23,"ra":21.72512637,"dec":58.78005308},
+{"mag":5.96,"ra":21.73360521,"dec":-14.7493955},
+{"mag":4.49,"ra":21.73566791,"dec":28.74322228},
+{"mag":2.38,"ra":21.73642787,"dec":9.87500791},
+{"mag":4.34,"ra":21.74185847,"dec":17.35004352},
+{"mag":5.96,"ra":21.74199734,"dec":14.77221491},
+{"mag":4.14,"ra":21.7440845,"dec":25.64500284},
+{"mag":5.94,"ra":21.74813427,"dec":62.46057429},
+{"mag":4.35,"ra":21.74910772,"dec":-33.02555306},
+{"mag":5.1,"ra":21.75006858,"dec":-9.08242443},
+{"mag":4.25,"ra":21.75748035,"dec":61.12081043},
+{"mag":5.29,"ra":21.76787738,"dec":22.94888549},
+{"mag":5.57,"ra":21.77557783,"dec":-11.36593201},
+{"mag":4.23,"ra":21.77989052,"dec":49.3095748},
+{"mag":2.85,"ra":21.78396813,"dec":-16.12656595},
+{"mag":5.63,"ra":21.78721066,"dec":2.68613092},
+{"mag":5.53,"ra":21.79036317,"dec":60.69269363},
+{"mag":5.02,"ra":21.79560369,"dec":-30.89830582},
+{"mag":5.57,"ra":21.80433581,"dec":-47.3028979},
+{"mag":5.07,"ra":21.83074498,"dec":30.17427852},
+{"mag":5.62,"ra":21.83336955,"dec":-64.7124436},
+{"mag":5.34,"ra":21.83573443,"dec":17.28595705},
+{"mag":5.52,"ra":21.84645156,"dec":-69.62940458},
+{"mag":5.27,"ra":21.84840237,"dec":-82.71882392},
+{"mag":5.78,"ra":21.85950987,"dec":19.82664938},
+{"mag":5.7,"ra":21.86695069,"dec":55.79674452},
+{"mag":5.52,"ra":21.8749878,"dec":28.79369216},
+{"mag":5.09,"ra":21.8843785,"dec":25.92513878},
+{"mag":5.08,"ra":21.88821772,"dec":-13.55180134},
+{"mag":5.69,"ra":21.89371306,"dec":19.66838008},
+{"mag":3.0,"ra":21.8987928,"dec":-37.3648229},
+{"mag":5.71,"ra":21.90287279,"dec":-4.27595735},
+{"mag":5.74,"ra":21.91476614,"dec":56.6112326},
+{"mag":5.92,"ra":21.91981642,"dec":-61.88638824},
+{"mag":5.84,"ra":21.92527528,"dec":65.32081194},
+{"mag":5.45,"ra":21.93966341,"dec":-37.25363145},
+{"mag":5.11,"ra":21.9442067,"dec":63.62556651},
+{"mag":5.54,"ra":21.94899688,"dec":12.07652564},
+{"mag":4.4,"ra":21.96528638,"dec":-54.9925666},
+{"mag":5.96,"ra":21.98152998,"dec":62.69795151},
+{"mag":5.04,"ra":21.98752881,"dec":73.18028413},
+{"mag":5.5,"ra":21.98830005,"dec":-38.3950933},
+{"mag":5.43,"ra":22.01394862,"dec":-28.45373726},
+{"mag":5.6,"ra":22.01805861,"dec":0.60474348},
+{"mag":5.61,"ra":22.01814306,"dec":13.11996136},
+{"mag":5.65,"ra":22.01923315,"dec":8.25717124},
+{"mag":5.79,"ra":22.03071612,"dec":52.88224628},
+{"mag":5.55,"ra":22.03460442,"dec":58.00037041},
+{"mag":5.57,"ra":22.04907718,"dec":44.64994158},
+{"mag":5.94,"ra":22.05103949,"dec":-76.11826634},
+{"mag":5.55,"ra":22.05456423,"dec":-6.52242698},
+{"mag":4.69,"ra":22.05484433,"dec":-56.77980602},
+{"mag":4.74,"ra":22.05523045,"dec":-2.15533588},
+{"mag":5.83,"ra":22.05528392,"dec":11.38655605},
+{"mag":4.26,"ra":22.06310052,"dec":64.62775425},
+{"mag":5.26,"ra":22.06470278,"dec":63.11977885},
+{"mag":5.97,"ra":22.07687745,"dec":-26.8223356},
+{"mag":5.29,"ra":22.07984273,"dec":-0.90623994},
+{"mag":5.27,"ra":22.08346658,"dec":62.78552941},
+{"mag":5.07,"ra":22.08577535,"dec":62.27982101},
+{"mag":5.75,"ra":22.08647651,"dec":26.67361826},
+{"mag":5.69,"ra":22.09295962,"dec":28.96400385},
+{"mag":4.86,"ra":22.09463666,"dec":5.05828453},
+{"mag":2.95,"ra":22.09639591,"dec":-0.31982656},
+{"mag":5.62,"ra":22.0974865,"dec":-59.63594171},
+{"mag":5.09,"ra":22.10054442,"dec":45.01438566},
+{"mag":4.47,"ra":22.10191767,"dec":-39.54304903},
+{"mag":4.29,"ra":22.10727926,"dec":-13.86954013},
+{"mag":3.77,"ra":22.11679848,"dec":25.3450461},
+{"mag":5.74,"ra":22.12458816,"dec":19.47543631},
+{"mag":5.79,"ra":22.13064796,"dec":21.70309155},
+{"mag":1.73,"ra":22.13718789,"dec":-46.96061593},
+{"mag":4.5,"ra":22.13970922,"dec":-32.98839827},
+{"mag":4.99,"ra":22.14053557,"dec":-34.04372111},
+{"mag":5.8,"ra":22.14971962,"dec":-18.51957349},
+{"mag":5.58,"ra":22.15379878,"dec":33.1724976},
+{"mag":4.79,"ra":22.16343527,"dec":72.34119936},
+{"mag":5.37,"ra":22.16547537,"dec":-34.01503553},
+{"mag":4.28,"ra":22.16645906,"dec":33.17826747},
+{"mag":4.94,"ra":22.1690232,"dec":-32.54844042},
+{"mag":3.52,"ra":22.16994993,"dec":6.197789},
+{"mag":5.98,"ra":22.17602889,"dec":-4.26686395},
+{"mag":5.78,"ra":22.17707231,"dec":11.6246717},
+{"mag":5.43,"ra":22.17707348,"dec":-11.56495901},
+{"mag":5.52,"ra":22.17747284,"dec":70.1325139},
+{"mag":3.39,"ra":22.18090608,"dec":58.20124992},
+{"mag":5.38,"ra":22.18604888,"dec":50.82328938},
+{"mag":5.05,"ra":22.19182897,"dec":59.41451451},
+{"mag":5.24,"ra":22.19680975,"dec":56.83904211},
+{"mag":5.93,"ra":22.19759245,"dec":16.04059653},
+{"mag":5.37,"ra":22.20055952,"dec":60.75907189},
+{"mag":5.97,"ra":22.20224653,"dec":24.950637},
+{"mag":5.76,"ra":22.20623483,"dec":63.2910719},
+{"mag":5.34,"ra":22.21328085,"dec":34.60471273},
+{"mag":5.27,"ra":22.21949292,"dec":86.10785672},
+{"mag":5.87,"ra":22.22740282,"dec":28.60802681},
+{"mag":5.58,"ra":22.22899649,"dec":-25.18092537},
+{"mag":5.53,"ra":22.23032751,"dec":45.44060328},
+{"mag":4.5,"ra":22.23130596,"dec":39.71488928},
+{"mag":5.33,"ra":22.23833825,"dec":-21.07470081},
+{"mag":5.45,"ra":22.23853786,"dec":-27.76691218},
+{"mag":5.72,"ra":22.2456474,"dec":42.95396372},
+{"mag":4.18,"ra":22.25046638,"dec":57.04346522},
+{"mag":4.79,"ra":22.26024577,"dec":-41.34675029},
+{"mag":4.14,"ra":22.26615838,"dec":37.74873483},
+{"mag":5.88,"ra":22.27403128,"dec":57.22022542},
+{"mag":5.11,"ra":22.27404682,"dec":-41.62720198},
+{"mag":5.34,"ra":22.28001209,"dec":-12.83144751},
+{"mag":4.17,"ra":22.28054621,"dec":-7.78323706},
+{"mag":5.8,"ra":22.28127782,"dec":-9.04003734},
+{"mag":5.75,"ra":22.28513949,"dec":-5.38721152},
+{"mag":5.49,"ra":22.29741549,"dec":-77.51158803},
+{"mag":5.75,"ra":22.30349856,"dec":62.80436392},
+{"mag":5.36,"ra":22.30421737,"dec":-53.62553594},
+{"mag":2.87,"ra":22.30838283,"dec":-60.25949486},
+{"mag":5.96,"ra":22.31686013,"dec":-13.30497087},
+{"mag":5.09,"ra":22.3337445,"dec":-80.43964301},
+{"mag":5.35,"ra":22.33664099,"dec":-7.82110592},
+{"mag":5.37,"ra":22.34099026,"dec":5.78949288},
+{"mag":4.55,"ra":22.35042452,"dec":46.53656484},
+{"mag":4.78,"ra":22.35536877,"dec":28.33051592},
+{"mag":4.82,"ra":22.35863091,"dec":12.20517262},
+{"mag":5.12,"ra":22.35988207,"dec":-21.59802435},
+{"mag":3.86,"ra":22.36091665,"dec":-1.38735315},
+{"mag":5.62,"ra":22.38549754,"dec":-45.92834717},
+{"mag":5.53,"ra":22.39188495,"dec":-24.76265507},
+{"mag":5.92,"ra":22.39226526,"dec":-7.19444293},
+{"mag":4.42,"ra":22.39267678,"dec":52.22949951},
+{"mag":5.79,"ra":22.40190795,"dec":-4.83700102},
+{"mag":5.76,"ra":22.40750832,"dec":-13.52940359},
+{"mag":4.55,"ra":22.40860992,"dec":49.47640074},
+{"mag":5.28,"ra":22.40955299,"dec":-72.25377388},
+{"mag":5.31,"ra":22.41560907,"dec":-57.79661017},
+{"mag":5.78,"ra":22.41955326,"dec":-70.4314706},
+{"mag":4.8,"ra":22.42128123,"dec":1.37739245},
+{"mag":5.47,"ra":22.43355081,"dec":70.77088542},
+{"mag":5.55,"ra":22.44281876,"dec":-16.74214759},
+{"mag":5.76,"ra":22.44367165,"dec":4.39363758},
+{"mag":5.83,"ra":22.44512396,"dec":78.78594317},
+{"mag":5.52,"ra":22.45147536,"dec":65.13227452},
+{"mag":4.51,"ra":22.4555203,"dec":-64.96637927},
+{"mag":4.78,"ra":22.46429917,"dec":4.6964107},
+{"mag":5.56,"ra":22.47706698,"dec":-67.48888731},
+{"mag":5.47,"ra":22.47755052,"dec":-39.13140099},
+{"mag":3.65,"ra":22.48050015,"dec":-0.02006304},
+{"mag":5.6,"ra":22.48554236,"dec":9.12908395},
+{"mag":5.79,"ra":22.48616958,"dec":26.76320924},
+{"mag":4.07,"ra":22.48617998,"dec":58.4151899},
+{"mag":3.97,"ra":22.48782057,"dec":-43.49555433},
+{"mag":4.34,"ra":22.49217298,"dec":47.70689488},
+{"mag":4.12,"ra":22.49595707,"dec":-43.74922804},
+{"mag":5.95,"ra":22.49609469,"dec":-27.10723481},
+{"mag":5.45,"ra":22.49804671,"dec":78.82433733},
+{"mag":5.51,"ra":22.49943013,"dec":4.43205725},
+{"mag":5.64,"ra":22.50049797,"dec":32.57267245},
+{"mag":4.52,"ra":22.50812822,"dec":43.12338985},
+{"mag":4.82,"ra":22.51078194,"dec":-10.67788619},
+{"mag":3.76,"ra":22.52149326,"dec":50.28244976},
+{"mag":4.29,"ra":22.52508043,"dec":-32.34602798},
+{"mag":5.76,"ra":22.52717441,"dec":-85.96740206},
+{"mag":5.7,"ra":22.53785415,"dec":76.22646833},
+{"mag":5.88,"ra":22.54065958,"dec":39.77975511},
+{"mag":4.91,"ra":22.5500035,"dec":-61.982073},
+{"mag":5.72,"ra":22.56126853,"dec":56.62463722},
+{"mag":5.88,"ra":22.56746913,"dec":-1.57417924},
+{"mag":5.21,"ra":22.57819409,"dec":-20.70785949},
+{"mag":4.04,"ra":22.58925803,"dec":-0.11736123},
+{"mag":5.97,"ra":22.59343311,"dec":-23.99107868},
+{"mag":5.08,"ra":22.59604907,"dec":73.64312707},
+{"mag":5.73,"ra":22.59785679,"dec":39.63434136},
+{"mag":5.82,"ra":22.60985261,"dec":-31.66369314},
+{"mag":5.85,"ra":22.61633886,"dec":-40.59086511},
+{"mag":5.8,"ra":22.62023971,"dec":75.3717918},
+{"mag":4.64,"ra":22.62290716,"dec":51.54537399},
+{"mag":5.04,"ra":22.62928361,"dec":-4.22776291},
+{"mag":5.11,"ra":22.64385201,"dec":56.79571012},
+{"mag":5.19,"ra":22.64418183,"dec":63.5845212},
+{"mag":5.66,"ra":22.64762875,"dec":-33.08138295},
+{"mag":5.84,"ra":22.64794946,"dec":19.52249181},
+{"mag":4.89,"ra":22.65435525,"dec":39.05028301},
+{"mag":5.94,"ra":22.67177801,"dec":53.84597214},
+{"mag":5.88,"ra":22.67288323,"dec":-30.65836159},
+{"mag":4.5,"ra":22.67521732,"dec":44.27628068},
+{"mag":4.18,"ra":22.67759043,"dec":-27.0436148},
+{"mag":5.98,"ra":22.680238,"dec":-57.422306},
+{"mag":5.72,"ra":22.68125508,"dec":14.54886051},
+{"mag":3.41,"ra":22.69102078,"dec":10.83139111},
+{"mag":5.25,"ra":22.69129208,"dec":40.22546314},
+{"mag":5.93,"ra":22.69331721,"dec":41.54897766},
+{"mag":4.8,"ra":22.69594714,"dec":29.3076892},
+{"mag":5.92,"ra":22.6992774,"dec":14.51644444},
+{"mag":5.99,"ra":22.71024367,"dec":-47.21000778},
+{"mag":2.07,"ra":22.71109302,"dec":-46.88456594},
+{"mag":2.93,"ra":22.71670238,"dec":30.22130866},
+{"mag":4.84,"ra":22.7249913,"dec":-41.41411843},
+{"mag":4.68,"ra":22.72645904,"dec":-18.83030716},
+{"mag":5.93,"ra":22.73478116,"dec":39.46541736},
+{"mag":5.11,"ra":22.73485708,"dec":41.81922714},
+{"mag":4.84,"ra":22.76051446,"dec":-53.50016316},
+{"mag":5.52,"ra":22.76133542,"dec":-46.54729992},
+{"mag":4.13,"ra":22.76770092,"dec":-81.38161731},
+{"mag":5.84,"ra":22.76947368,"dec":44.54597654},
+{"mag":3.97,"ra":22.77551177,"dec":23.56567939},
+{"mag":4.2,"ra":22.77817819,"dec":12.17408381},
+{"mag":4.77,"ra":22.79137428,"dec":83.15371558},
+{"mag":5.24,"ra":22.79255208,"dec":-19.61287445},
+{"mag":5.68,"ra":22.7952086,"dec":-14.05640541},
+{"mag":5.82,"ra":22.80307415,"dec":37.41684226},
+{"mag":3.49,"ra":22.80922142,"dec":-51.31670354},
+{"mag":4.05,"ra":22.8265305,"dec":-13.59253756},
+{"mag":3.5,"ra":22.82803115,"dec":66.20071089},
+{"mag":5.43,"ra":22.82950794,"dec":55.90268437},
+{"mag":3.51,"ra":22.8333612,"dec":24.60168486},
+{"mag":5.91,"ra":22.83938011,"dec":41.95340325},
+{"mag":5.32,"ra":22.83965167,"dec":-80.12381446},
+{"mag":5.43,"ra":22.85059602,"dec":-39.15681779},
+{"mag":5.89,"ra":22.85081593,"dec":85.373461},
+{"mag":5.99,"ra":22.85581788,"dec":-29.53627381},
+{"mag":5.61,"ra":22.8562523,"dec":61.69663851},
+{"mag":4.95,"ra":22.86720757,"dec":43.31236494},
+{"mag":5.16,"ra":22.87326847,"dec":9.83555733},
+{"mag":4.46,"ra":22.87543275,"dec":-32.87545019},
+{"mag":3.73,"ra":22.87690679,"dec":-7.57967878},
+{"mag":5.86,"ra":22.8839663,"dec":16.84126106},
+{"mag":5.8,"ra":22.89130309,"dec":-11.61651887},
+{"mag":5.79,"ra":22.89448854,"dec":44.74920148},
+{"mag":5.82,"ra":22.90191966,"dec":40.37683633},
+{"mag":4.7,"ra":22.90677342,"dec":84.34611856},
+{"mag":3.27,"ra":22.91084423,"dec":-15.82075994},
+{"mag":5.53,"ra":22.912668,"dec":-16.27174207},
+{"mag":5.91,"ra":22.91738442,"dec":37.07680479},
+{"mag":5.72,"ra":22.91970674,"dec":-4.98787812},
+{"mag":4.91,"ra":22.9204512,"dec":8.81609536},
+{"mag":5.73,"ra":22.92902588,"dec":36.35139364},
+{"mag":4.2,"ra":22.93247,"dec":-32.53970196},
+{"mag":5.6,"ra":22.93989749,"dec":41.60388627},
+{"mag":4.99,"ra":22.94055518,"dec":49.73355094},
+{"mag":5.72,"ra":22.94661726,"dec":-47.96922586},
+{"mag":5.34,"ra":22.95124828,"dec":48.68408117},
+{"mag":5.45,"ra":22.95773629,"dec":20.7686841},
+{"mag":1.17,"ra":22.96078488,"dec":-29.62183701},
+{"mag":5.76,"ra":22.98661045,"dec":11.72894102},
+{"mag":5.43,"ra":22.99094515,"dec":0.96309154},
+{"mag":5.51,"ra":22.99326742,"dec":-29.46232352},
+{"mag":5.1,"ra":23.00141774,"dec":56.94538131},
+{"mag":5.66,"ra":23.00160169,"dec":-25.16398677},
+{"mag":5.85,"ra":23.01191597,"dec":3.01200821},
+{"mag":4.11,"ra":23.01468731,"dec":-52.75410562},
+{"mag":5.68,"ra":23.01874905,"dec":-50.95002911},
+{"mag":5.55,"ra":23.02204097,"dec":-28.85390821},
+{"mag":5.94,"ra":23.02547276,"dec":-4.71147966},
+{"mag":3.62,"ra":23.03201291,"dec":42.32597866},
+{"mag":5.09,"ra":23.04342692,"dec":42.7578062},
+{"mag":5.97,"ra":23.04563533,"dec":-20.87039619},
+{"mag":5.12,"ra":23.05826751,"dec":-34.74961718},
+{"mag":5.25,"ra":23.05912452,"dec":67.20918487},
+{"mag":2.44,"ra":23.06287038,"dec":28.08245462},
+{"mag":4.48,"ra":23.06461292,"dec":3.82006998},
+{"mag":5.79,"ra":23.06656379,"dec":-41.47903194},
+{"mag":4.64,"ra":23.06967548,"dec":50.05168397},
+{"mag":5.37,"ra":23.07765857,"dec":-53.96464712},
+{"mag":2.49,"ra":23.07933801,"dec":15.20536786},
+{"mag":5.53,"ra":23.08115234,"dec":-68.82037973},
+{"mag":5.44,"ra":23.08603191,"dec":-7.69381853},
+{"mag":4.84,"ra":23.11022495,"dec":59.41976474},
+{"mag":4.48,"ra":23.11133535,"dec":-23.7431168},
+{"mag":4.28,"ra":23.1146579,"dec":-43.52032436},
+{"mag":5.62,"ra":23.11488884,"dec":-38.89230672},
+{"mag":4.54,"ra":23.11673773,"dec":9.40952259},
+{"mag":4.76,"ra":23.11853866,"dec":25.46833959},
+{"mag":5.81,"ra":23.12077961,"dec":-50.68662467},
+{"mag":5.97,"ra":23.12462431,"dec":21.13437231},
+{"mag":5.3,"ra":23.12757711,"dec":46.38730373},
+{"mag":5.68,"ra":23.12923555,"dec":49.29545491},
+{"mag":4.41,"ra":23.13162169,"dec":75.3875815},
+{"mag":5.6,"ra":23.13919343,"dec":-28.82356853},
+{"mag":5.42,"ra":23.14467811,"dec":2.12761798},
+{"mag":3.68,"ra":23.15743391,"dec":-21.17248555},
+{"mag":5.05,"ra":23.15873745,"dec":8.67717165},
+{"mag":5.68,"ra":23.16226069,"dec":59.33268922},
+{"mag":5.88,"ra":23.16239388,"dec":-28.08857609},
+{"mag":4.71,"ra":23.16524358,"dec":-22.45759248},
+{"mag":5.83,"ra":23.16601132,"dec":-42.86116912},
+{"mag":5.39,"ra":23.1670753,"dec":9.82210111},
+{"mag":5.9,"ra":23.16936637,"dec":-40.59143612},
+{"mag":3.88,"ra":23.17261887,"dec":-45.24664747},
+{"mag":5.91,"ra":23.17426765,"dec":43.54473662},
+{"mag":5.68,"ra":23.17850606,"dec":17.59443802},
+{"mag":5.15,"ra":23.19560967,"dec":8.72012785},
+{"mag":4.53,"ra":23.20914525,"dec":49.40597489},
+{"mag":5.57,"ra":23.22076208,"dec":57.16763844},
+{"mag":5.85,"ra":23.22403012,"dec":11.06501583},
+{"mag":4.22,"ra":23.23870347,"dec":-6.0485268},
+{"mag":5.89,"ra":23.24361572,"dec":74.23125488},
+{"mag":5.77,"ra":23.24959301,"dec":-41.10512524},
+{"mag":5.56,"ra":23.25951803,"dec":-3.49637244},
+{"mag":5.55,"ra":23.26047436,"dec":70.88808538},
+{"mag":4.24,"ra":23.26479915,"dec":-9.08769554},
+{"mag":5.92,"ra":23.27771893,"dec":-44.48914171},
+{"mag":5.58,"ra":23.27838732,"dec":53.21404995},
+{"mag":4.93,"ra":23.28081957,"dec":-7.72646619},
+{"mag":5.64,"ra":23.28263009,"dec":-62.00113447},
+{"mag":3.7,"ra":23.28597045,"dec":3.28224524},
+{"mag":3.99,"ra":23.29050334,"dec":-58.23592762},
+{"mag":4.82,"ra":23.29572675,"dec":49.01528336},
+{"mag":4.41,"ra":23.29838989,"dec":-9.1824899},
+{"mag":5.54,"ra":23.30271836,"dec":-40.82406346},
+{"mag":5.98,"ra":23.30648102,"dec":41.77370255},
+{"mag":4.75,"ra":23.3103908,"dec":68.11141807},
+{"mag":4.41,"ra":23.31372966,"dec":-32.53183574},
+{"mag":4.99,"ra":23.31601414,"dec":-9.610731},
+{"mag":5.2,"ra":23.31847474,"dec":-13.45844256},
+{"mag":5.56,"ra":23.3232943,"dec":-5.12430243},
+{"mag":5.96,"ra":23.32336264,"dec":-18.07539972},
+{"mag":5.44,"ra":23.32494109,"dec":48.62519601},
+{"mag":5.81,"ra":23.33121699,"dec":42.07803394},
+{"mag":5.05,"ra":23.33903807,"dec":5.38145156},
+{"mag":4.58,"ra":23.34395088,"dec":23.7403592},
+{"mag":5.58,"ra":23.34708456,"dec":30.4150884},
+{"mag":5.77,"ra":23.34810241,"dec":38.18247497},
+{"mag":5.65,"ra":23.3543086,"dec":-26.98674162},
+{"mag":5.35,"ra":23.36525723,"dec":31.81248117},
+{"mag":5.56,"ra":23.37570131,"dec":60.13348919},
+{"mag":5.19,"ra":23.37752798,"dec":-15.03938012},
+{"mag":3.96,"ra":23.38286152,"dec":-20.10034505},
+{"mag":5.09,"ra":23.38459921,"dec":12.3139519},
+{"mag":5.75,"ra":23.40367742,"dec":-51.89108428},
+{"mag":4.96,"ra":23.41395751,"dec":62.28283877},
+{"mag":5.56,"ra":23.41411691,"dec":32.38487495},
+{"mag":5.6,"ra":23.42204854,"dec":-56.84893507},
+{"mag":4.42,"ra":23.4229615,"dec":23.40401243},
+{"mag":4.38,"ra":23.43411593,"dec":-20.64186122},
+{"mag":5.53,"ra":23.44348452,"dec":-52.721919},
+{"mag":4.95,"ra":23.44886258,"dec":1.25583758},
+{"mag":5.56,"ra":23.44997751,"dec":87.30745696},
+{"mag":5.75,"ra":23.45203633,"dec":42.91196859},
+{"mag":5.63,"ra":23.45414832,"dec":-58.47627854},
+{"mag":5.6,"ra":23.4545606,"dec":70.35979323},
+{"mag":5.99,"ra":23.4612136,"dec":25.1673687},
+{"mag":4.27,"ra":23.46615772,"dec":6.37909727},
+{"mag":5.5,"ra":23.46765741,"dec":-87.48224182},
+{"mag":5.66,"ra":23.4835917,"dec":-63.11062274},
+{"mag":4.54,"ra":23.48590563,"dec":12.76049243},
+{"mag":4.89,"ra":23.50053318,"dec":58.54890978},
+{"mag":5.22,"ra":23.52144376,"dec":39.2364018},
+{"mag":4.38,"ra":23.5494967,"dec":-37.81835895},
+{"mag":4.7,"ra":23.55461808,"dec":-20.91452506},
+{"mag":5.82,"ra":23.55542932,"dec":-77.38533173},
+{"mag":5.33,"ra":23.55780214,"dec":22.49881721},
+{"mag":4.97,"ra":23.56587592,"dec":31.32532196},
+{"mag":5.91,"ra":23.56915404,"dec":-1.24753498},
+{"mag":5.55,"ra":23.57709743,"dec":40.23655244},
+{"mag":5.63,"ra":23.57727961,"dec":33.4972759},
+{"mag":5.95,"ra":23.58036961,"dec":-15.24579181},
+{"mag":5.86,"ra":23.58306402,"dec":71.64204906},
+{"mag":4.69,"ra":23.58459182,"dec":-42.61510105},
+{"mag":5.68,"ra":23.60648525,"dec":2.10207138},
+{"mag":5.81,"ra":23.62556421,"dec":44.42903532},
+{"mag":3.81,"ra":23.62602991,"dec":46.45917621},
+{"mag":5.66,"ra":23.62764972,"dec":-13.06030596},
+{"mag":4.74,"ra":23.63081536,"dec":-45.49232134},
+{"mag":5.49,"ra":23.63243689,"dec":18.40062425},
+{"mag":4.29,"ra":23.63560531,"dec":43.2680761},
+{"mag":5.99,"ra":23.63991366,"dec":-76.86950742},
+{"mag":5.35,"ra":23.65231871,"dec":50.47173744},
+{"mag":5.95,"ra":23.65282216,"dec":75.29284842},
+{"mag":3.21,"ra":23.65582834,"dec":77.63196681},
+{"mag":5.98,"ra":23.65587978,"dec":74.00261499},
+{"mag":4.97,"ra":23.66306578,"dec":-14.22204281},
+{"mag":5.99,"ra":23.66527433,"dec":9.67732079},
+{"mag":4.13,"ra":23.66578342,"dec":5.62735374},
+{"mag":4.15,"ra":23.67345605,"dec":44.33397776},
+{"mag":5.3,"ra":23.67728113,"dec":-32.07299489},
+{"mag":5.89,"ra":23.68579752,"dec":-11.68066248},
+{"mag":5.36,"ra":23.6929205,"dec":-18.02690134},
+{"mag":4.82,"ra":23.69605484,"dec":-17.81653327},
+{"mag":5.89,"ra":23.69908502,"dec":7.25064591},
+{"mag":4.49,"ra":23.70080049,"dec":1.7804172},
+{"mag":5.27,"ra":23.70772591,"dec":-15.44797581},
+{"mag":4.49,"ra":23.71202357,"dec":-14.54474243},
+{"mag":5.09,"ra":23.7228768,"dec":10.33150851},
+{"mag":4.93,"ra":23.73317723,"dec":29.36155278},
+{"mag":5.73,"ra":23.73667391,"dec":-64.40453515},
+{"mag":5.24,"ra":23.73668394,"dec":-18.27692862},
+{"mag":5.74,"ra":23.74463391,"dec":-78.79144467},
+{"mag":5.28,"ra":23.76690061,"dec":-18.67836913},
+{"mag":4.97,"ra":23.76723303,"dec":46.42029095},
+{"mag":4.95,"ra":23.77320469,"dec":3.48687164},
+{"mag":5.95,"ra":23.77686811,"dec":66.78225128},
+{"mag":5.55,"ra":23.78386515,"dec":57.45137702},
+{"mag":4.88,"ra":23.78427407,"dec":58.65185164},
+{"mag":5.74,"ra":23.78776147,"dec":-11.91089898},
+{"mag":5.18,"ra":23.78777432,"dec":-50.22640416},
+{"mag":5.05,"ra":23.79854102,"dec":67.80681263},
+{"mag":5.49,"ra":23.79902407,"dec":-2.76161103},
+{"mag":5.43,"ra":23.81393746,"dec":62.21451996},
+{"mag":4.59,"ra":23.81541108,"dec":-28.1300148},
+{"mag":5.77,"ra":23.8242988,"dec":1.07619547},
+{"mag":5.95,"ra":23.82759792,"dec":28.84232813},
+{"mag":5.86,"ra":23.82804446,"dec":36.42539712},
+{"mag":5.93,"ra":23.83740228,"dec":-9.9743269},
+{"mag":5.7,"ra":23.84257308,"dec":-14.40143843},
+{"mag":5.77,"ra":23.85590402,"dec":9.31350996},
+{"mag":5.17,"ra":23.85592272,"dec":-18.90915459},
+{"mag":5.59,"ra":23.86606395,"dec":2.93041943},
+{"mag":5.1,"ra":23.86852606,"dec":-82.01876765},
+{"mag":5.06,"ra":23.87480337,"dec":19.12037002},
+{"mag":5.85,"ra":23.8750134,"dec":-14.251207},
+{"mag":5.3,"ra":23.87697716,"dec":10.94732837},
+{"mag":5.76,"ra":23.8806923,"dec":-8.99669856},
+{"mag":5.93,"ra":23.88208892,"dec":-3.15537813},
+{"mag":4.51,"ra":23.90639925,"dec":57.49939052},
+{"mag":5.78,"ra":23.91295756,"dec":0.10934429},
+{"mag":5.57,"ra":23.9523594,"dec":55.70573518},
+{"mag":5.95,"ra":23.95549448,"dec":-62.95661191},
+{"mag":5.72,"ra":23.9591636,"dec":-82.16974335},
+{"mag":5.0,"ra":23.95971437,"dec":-64.29808259},
+{"mag":4.63,"ra":23.96265266,"dec":25.14147936},
+{"mag":4.88,"ra":23.97789182,"dec":-3.55580738},
+{"mag":5.13,"ra":23.98214541,"dec":-52.74595629},
+{"mag":4.88,"ra":23.98348048,"dec":55.75494069},
+{"mag":4.03,"ra":23.98850066,"dec":6.86359373},
+{"mag":5.59,"ra":23.9910838,"dec":-29.48515314},
+{"mag":5.81,"ra":23.99148162,"dec":33.72413297},
+{"mag":4.49,"ra":23.99858613,"dec":-65.57707774},
+{"mag":5.8,"ra":1.6627536667127,"dec":-56.1949725147739},
+{"mag":5.6,"ra":2.65933151749622,"dec":-11.8678770998089},
+{"mag":5.7,"ra":5.12373688605433,"dec":18.6467555582586},
+{"mag":0.96,"ra":5.27785134115813,"dec":46.006708593181},
+{"mag":2.85,"ra":7.57697782948592,"dec":31.8918827889317},
+{"mag":5.0,"ra":8.744920107427,"dec":-54.7070032085306},
+{"mag":4.65,"ra":9.5119377078919,"dec":-40.4665764206189},
+{"mag":5.6,"ra":9.73664253556046,"dec":-27.7693931920329},
+{"mag":4.33,"ra":11.3035119198113,"dec":31.5368521599899},
+{"mag":4.8,"ra":11.3035119198113,"dec":31.5368521599899},
+{"mag":3.52,"ra":12.6946896478077,"dec":-1.44933013444673},
+{"mag":5.17,"ra":13.1667836929554,"dec":17.526962699562},
+{"mag":3.95,"ra":13.398898541116,"dec":54.9208921914242},
+{"mag":5.96,"ra":15.0636048878972,"dec":47.6533332577253},
+{"mag":5.96,"ra":15.3865051497143,"dec":30.2887873723128},
+{"mag":4.84,"ra":16.0728309493662,"dec":-11.3741501261325},
+{"mag":5.0,"ra":16.0728309493662,"dec":-11.3741501261325},
+{"mag":5.4,"ra":16.6885903902606,"dec":31.5957722949146},
+{"mag":5.63,"ra":17.0887840325494,"dec":54.4679889670376},
+{"mag":3.4,"ra":17.172748885964,"dec":-15.728212356111},
+{"mag":5.07,"ra":17.2561897481974,"dec":-26.5875605536023},
+{"mag":5.24,"ra":18.051182117854,"dec":-8.18124153788091},
+{"mag":5.0,"ra":19.1067621235043,"dec":-37.0610654595946},
+{"mag":5.4,"ra":21.241368709269,"dec":10.0102469021677},
+{"mag":5.9,"ra":23.1652874122051,"dec":-22.4572994416514}];
+},{}],"/Users/jzeimen/Dropbox/Programming/skyatlas/src/stats.js":[function(require,module,exports){
 // stats.js - http://github.com/mrdoob/stats.js
 var Stats=function(){var l=Date.now(),m=l,g=0,n=Infinity,o=0,h=0,p=Infinity,q=0,r=0,s=0,f=document.createElement("div");f.id="stats";f.addEventListener("mousedown",function(b){b.preventDefault();t(++s%2)},!1);f.style.cssText="width:80px;opacity:0.9;cursor:pointer";var a=document.createElement("div");a.id="fps";a.style.cssText="padding:0 0 3px 3px;text-align:left;background-color:#002";f.appendChild(a);var i=document.createElement("div");i.id="fpsText";i.style.cssText="color:#0ff;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:bold;line-height:15px";
 i.innerHTML="FPS";a.appendChild(i);var c=document.createElement("div");c.id="fpsGraph";c.style.cssText="position:relative;width:74px;height:30px;background-color:#0ff";for(a.appendChild(c);74>c.children.length;){var j=document.createElement("span");j.style.cssText="width:1px;height:30px;float:left;background-color:#113";c.appendChild(j)}var d=document.createElement("div");d.id="ms";d.style.cssText="padding:0 0 3px 3px;text-align:left;background-color:#020;display:none";f.appendChild(d);var k=document.createElement("div");
